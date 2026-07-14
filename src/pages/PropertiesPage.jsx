@@ -15,23 +15,29 @@ import DuplicatesManagementModal from '@/components/duplicates/DuplicatesManagem
 import { exportTableToCSV } from '@/utils/csvExportService';
 import { useSessionStorage } from '@/hooks/useSessionStorage';
 import SearchBar from '@/components/search/SearchBar';
-import { useClientSearch } from '@/hooks/useClientSearch';
+import { useUnifiedSearch } from '@/hooks/useUnifiedSearch';
+import UnifiedSearchResultsTable from '@/components/search/UnifiedSearchResultsTable';
 import { usePageStateManager } from '@/hooks/usePageStateManager';
 
 const PropertiesPage = () => {
     const { toast } = useToast();
     const { properties, loading, fetchAllData } = useData();
-    const { user } = useAuth();
+    const { user, userRole } = useAuth();
     const { getFormData } = useSessionStorage();
     const { saveState, loadState } = usePageStateManager('properties_pageState');
     
     const { 
         searchTerm, 
         setSearchTerm, 
+        showAllRecords, 
+        setShowAllRecords, 
+        searchInAllTables, 
+        setSearchInAllTables, 
         filteredData, 
-        filteredCount, 
-        totalCount 
-    } = useClientSearch(properties, 'properties');
+        isGlobalSearchActive, 
+        totalCount, 
+        filteredCount 
+    } = useUnifiedSearch(properties, 'properties');
 
     const [pageIndex, setPageIndex] = useState(0);
     const [selectedRecord, setSelectedRecord] = useState(null);
@@ -46,6 +52,8 @@ const PropertiesPage = () => {
         if (saved) {
             if (saved.currentPage !== undefined) setPageIndex(saved.currentPage);
             if (saved.searchTerm !== undefined) setSearchTerm(saved.searchTerm);
+            if (saved.showAllRecords !== undefined) setShowAllRecords(saved.showAllRecords);
+            if (saved.searchInAllTables !== undefined) setSearchInAllTables(saved.searchInAllTables);
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
@@ -54,11 +62,13 @@ const PropertiesPage = () => {
         saveState({
             currentPage: pageIndex,
             searchTerm: searchTerm || "",
+            showAllRecords,
+            searchInAllTables,
             filters: {},
             sortBy: [],
             expandedRows: {}
         });
-    }, [pageIndex, searchTerm, saveState]);
+    }, [pageIndex, searchTerm, showAllRecords, searchInAllTables, saveState]);
 
     useEffect(() => {
         const draft = getFormData('properties', 'new');
@@ -206,22 +216,46 @@ const PropertiesPage = () => {
                         <h1 className="text-3xl font-bold">Immobili</h1>
                         <p className="text-muted-foreground mt-1">Gestione portafoglio immobiliare</p>
                     </div>
-                    <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                        <SearchBar 
-                            onSearch={setSearchTerm} 
-                            placeholder="Cerca immobili..." 
-                            resultsCount={filteredCount}
-                            totalCount={totalCount}
-                            initialValue={searchTerm}
-                            className="w-full md:w-64"
-                        />
-                        <div className="flex gap-2">
-                             <Button variant="outline" onClick={() => setIsRemapModalOpen(true)}>
-                                <Map className="mr-2 h-4 w-4" /> <span className="hidden sm:inline">Rimappa</span>
-                            </Button>
-                            <Button onClick={() => { setSelectedRecord({ recordType: 'Immobile' }); setIsDetailModalOpen(true); }}>
-                                <Plus className="mr-2 h-4 w-4"/> Aggiungi
-                            </Button>
+                    <div className="flex flex-col gap-2 w-full md:w-auto">
+                        <div className="flex flex-col sm:flex-row gap-2 w-full items-center">
+                            <SearchBar 
+                                onSearch={setSearchTerm} 
+                                placeholder="Cerca immobili..." 
+                                resultsCount={filteredCount}
+                                totalCount={totalCount}
+                                defaultValue={searchTerm}
+                                className="w-full md:w-64"
+                            />
+                            <div className="flex gap-2">
+                                 <Button variant="outline" onClick={() => setIsRemapModalOpen(true)}>
+                                    <Map className="mr-2 h-4 w-4" /> <span className="hidden sm:inline">Rimappa</span>
+                                </Button>
+                                <Button onClick={() => { setSelectedRecord({ recordType: 'Immobile' }); setIsDetailModalOpen(true); }}>
+                                    <Plus className="mr-2 h-4 w-4"/> Aggiungi
+                                </Button>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-4 items-center px-1 text-xs text-muted-foreground mt-1">
+                          {['agente', 'telemarketing'].includes(userRole) && (
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                              <input 
+                                type="checkbox" 
+                                checked={showAllRecords} 
+                                onChange={(e) => setShowAllRecords(e.target.checked)}
+                                className="rounded border-gray-300 text-primary focus:ring-primary h-3.5 w-3.5"
+                              />
+                              Mostra record di altri agenti (sola lettura)
+                            </label>
+                          )}
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input 
+                              type="checkbox" 
+                              checked={searchInAllTables} 
+                              onChange={(e) => setSearchInAllTables(e.target.checked)}
+                              className="rounded border-gray-300 text-primary focus:ring-primary h-3.5 w-3.5"
+                            />
+                            Cerca in tutte le tabelle
+                          </label>
                         </div>
                     </div>
                 </div>
@@ -235,13 +269,23 @@ const PropertiesPage = () => {
                     hideSearch={true} 
                 />
                 
-                <DataTable 
-                    columns={columns} 
-                    data={filteredData}
-                    filterPlaceholder="Cerca..." 
-                    pageIndex={pageIndex}
-                    onPageIndexChange={setPageIndex}
-                />
+                {isGlobalSearchActive ? (
+                    <UnifiedSearchResultsTable 
+                        results={filteredData}
+                        onRowClick={(originalRecord) => {
+                            setSelectedRecord(originalRecord);
+                            setIsDetailModalOpen(true);
+                        }}
+                    />
+                ) : (
+                    <DataTable 
+                        columns={columns} 
+                        data={filteredData}
+                        filterPlaceholder="Cerca..." 
+                        pageIndex={pageIndex}
+                        onPageIndexChange={setPageIndex}
+                    />
+                )}
             </div>
             
             {selectedRecord && (

@@ -5,10 +5,12 @@ import RecordDetailModal from '@/components/calendar/RecordDetailModal';
 import { useData } from '@/contexts/DataContext';
 import { useToast } from '@/components/ui/use-toast';
 import { supabase } from '@/lib/customSupabaseClient';
+import { Input } from '@/components/ui/input';
 
 const CalendarPage = () => {
   const [selectedRecord, setSelectedRecord] = useState(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
   const { updateRecord, addRecord } = useData();
   const { toast } = useToast();
 
@@ -85,10 +87,23 @@ const CalendarPage = () => {
         <meta name="description" content="Calendario appuntamenti per agenti e telemarketing." />
       </Helmet>
       <div>
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Calendario</h1>
-        <p className="mt-2 text-gray-600 dark:text-gray-300">Panoramica delle scadenze e degli appuntamenti.</p>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">Calendario</h1>
+            <p className="mt-2 text-gray-600 dark:text-gray-300">Panoramica delle scadenze e degli appuntamenti.</p>
+          </div>
+          <div className="w-full md:w-64">
+            <Input
+              type="text"
+              placeholder="Cerca nel calendario..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full shadow-sm bg-white dark:bg-gray-800"
+            />
+          </div>
+        </div>
         <div className="mt-8">
-          <CustomCalendar onEventClick={handleEventClick} />
+          <CustomCalendar onEventClick={handleEventClick} searchTerm={searchTerm} />
         </div>
       </div>
       {isModalOpen && selectedRecord && (

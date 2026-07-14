@@ -16,6 +16,7 @@ import AnalysisReport from '@/components/admin/AnalysisReport';
 import ImportAnalysisTool from '@/components/debug/ImportAnalysisTool';
 import BackupManagementModal from '@/components/admin/BackupManagementModal';
 import DatabaseAnalysisPanel from '@/components/admin/DatabaseAnalysisPanel';
+import TablesDiagnosticPanel from '@/components/debug/TablesDiagnosticPanel';
 
 const SuperAdminPanel = () => {
   const { toast } = useToast();
@@ -79,8 +80,9 @@ const SuperAdminPanel = () => {
         </div>
 
         <Tabs defaultValue="backups" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 lg:grid-cols-5 gap-2 h-auto">
+          <TabsList className="grid w-full grid-cols-2 md:grid-cols-6 lg:grid-cols-6 gap-2 h-auto">
             <TabsTrigger value="backups" className="py-2">Gestione Backup</TabsTrigger>
+            <TabsTrigger value="diagnostics" className="py-2">Diagnostica Tabelle</TabsTrigger>
             <TabsTrigger value="system_analysis" className="py-2">Analisi Sistema</TabsTrigger>
             <TabsTrigger value="analysis" className="py-2">Analisi Telemarketing</TabsTrigger>
             <TabsTrigger value="debug" className="py-2">Debug Import</TabsTrigger>
@@ -97,6 +99,10 @@ const SuperAdminPanel = () => {
                     <BackupManagementModal />
                 </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="diagnostics" className="mt-6">
+             <TablesDiagnosticPanel />
           </TabsContent>
 
           <TabsContent value="system_analysis" className="mt-6">

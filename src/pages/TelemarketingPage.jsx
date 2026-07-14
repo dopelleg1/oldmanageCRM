@@ -16,11 +16,13 @@ import { exportTableToCSV } from '@/utils/csvExportService';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { useSessionStorage } from '@/hooks/useSessionStorage';
 import { usePageStateManager } from '@/hooks/usePageStateManager';
+import { useUnifiedSearch } from '@/hooks/useUnifiedSearch';
+import UnifiedSearchResultsTable from '@/components/search/UnifiedSearchResultsTable';
 
 const TelemarketingPage = () => {
     const { toast } = useToast();
     const { telemarketing, loading, fetchAllData } = useData();
-    const { user } = useAuth();
+    const { user, userRole } = useAuth();
     const { getFormData } = useSessionStorage();
     
     // Page State Management
@@ -32,7 +34,6 @@ const TelemarketingPage = () => {
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
     const [isRemapModalOpen, setIsRemapModalOpen] = useState(false);
     
-    const [searchTerm, setSearchTerm] = useState('');
     const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
     const [sorting, setSorting] = useState([]);
     const [columnFilters, setColumnFilters] = useState([]);
@@ -40,11 +41,26 @@ const TelemarketingPage = () => {
     
     const documentManagerRef = useRef();
 
+    const {
+        searchTerm,
+        setSearchTerm,
+        showAllRecords,
+        setShowAllRecords,
+        searchInAllTables,
+        setSearchInAllTables,
+        filteredData,
+        isGlobalSearchActive,
+        totalCount,
+        filteredCount
+    } = useUnifiedSearch(telemarketing, 'telemarketing_contacts');
+
     // Restore state on mount
     useEffect(() => {
         const saved = loadState();
         if (saved) {
             if (saved.searchTerm !== undefined) setSearchTerm(saved.searchTerm);
+            if (saved.showAllRecords !== undefined) setShowAllRecords(saved.showAllRecords);
+            if (saved.searchInAllTables !== undefined) setSearchInAllTables(saved.searchInAllTables);
             if (saved.pagination) setPagination(saved.pagination);
             if (saved.sorting) setSorting(saved.sorting);
             if (saved.columnFilters) setColumnFilters(saved.columnFilters);
@@ -57,13 +73,15 @@ const TelemarketingPage = () => {
     // Save state on change
     useEffect(() => {
         if (isRestored) {
-            saveState({ searchTerm, pagination, sorting, columnFilters, expandedRows });
+            saveState({ searchTerm, showAllRecords, searchInAllTables, pagination, sorting, columnFilters, expandedRows });
         }
-    }, [searchTerm, pagination, sorting, columnFilters, expandedRows, isRestored, saveState]);
+    }, [searchTerm, showAllRecords, searchInAllTables, pagination, sorting, columnFilters, expandedRows, isRestored, saveState]);
 
     const handleClearFilters = () => {
         clearState();
         setSearchTerm('');
+        setShowAllRecords(false);
+        setSearchInAllTables(false);
         setPagination({ pageIndex: 0, pageSize: 10 });
         setSorting([]);
         setColumnFilters([]);
@@ -153,19 +171,7 @@ const TelemarketingPage = () => {
         }
     };
 
-    const filteredData = useMemo(() => {
-        if (!telemarketing) return [];
-        if (!searchTerm) return telemarketing;
 
-        const lowercasedTerm = searchTerm.toLowerCase();
-
-        return telemarketing.filter(record => {
-            return Object.values(record).some(value => {
-                if (value === null || value === undefined) return false;
-                return String(value).toLowerCase().includes(lowercasedTerm);
-            });
-        });
-    }, [telemarketing, searchTerm]);
 
     const columns = useMemo(() => [
         { 
@@ -239,21 +245,41 @@ const TelemarketingPage = () => {
                 </div>
                 
                 <div className="bg-white p-4 rounded-lg border shadow-sm space-y-4">
-                     <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-                        <div className="flex items-center gap-2 w-full md:max-w-md">
-                            <SearchBar
-                                onSearch={setSearchTerm}
-                                initialValue={searchTerm}
-                                placeholder="Cerca in tutti i campi..."
-                                resultsCount={filteredData?.length || 0}
-                                totalCount={telemarketing?.length || 0}
-                                className="w-full"
-                            />
-                            {hasPersistedState && (
-                                <Button variant="ghost" size="icon" onClick={handleClearFilters} title="Azzera filtri" className="text-muted-foreground hover:text-destructive flex-shrink-0">
-                                    <XCircle className="h-5 w-5" />
-                                </Button>
-                            )}
+                      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                        <div className="flex flex-col gap-2 w-full md:max-w-md">
+                            <div className="flex items-center gap-2 w-full">
+                                <SearchBar
+                                    onSearch={setSearchTerm}
+                                    defaultValue={searchTerm}
+                                    placeholder="Cerca in tutti i campi..."
+                                    resultsCount={filteredCount}
+                                    totalCount={totalCount}
+                                    className="w-full"
+                                />
+
+                            </div>
+                            <div className="flex flex-wrap gap-4 items-center px-1 text-xs text-muted-foreground mt-1">
+                              {['agente', 'telemarketing'].includes(userRole) && (
+                                <label className="flex items-center gap-2 cursor-pointer select-none">
+                                  <input 
+                                    type="checkbox" 
+                                    checked={showAllRecords} 
+                                    onChange={(e) => setShowAllRecords(e.target.checked)}
+                                    className="rounded border-gray-300 text-primary focus:ring-primary h-3.5 w-3.5"
+                                  />
+                                  Mostra record di altri agenti (sola lettura)
+                                </label>
+                              )}
+                              <label className="flex items-center gap-2 cursor-pointer select-none">
+                                <input 
+                                  type="checkbox" 
+                                  checked={searchInAllTables} 
+                                  onChange={(e) => setSearchInAllTables(e.target.checked)}
+                                  className="rounded border-gray-300 text-primary focus:ring-primary h-3.5 w-3.5"
+                                />
+                                Cerca in tutte le tabelle
+                              </label>
+                            </div>
                         </div>
                         <div className="flex gap-2">
                             <Button variant="outline" size="sm" onClick={() => fetchAllData()} title="Ricarica">
@@ -273,28 +299,38 @@ const TelemarketingPage = () => {
                                 </AlertDialogContent>
                             </AlertDialog>
                         </div>
-                     </div>
+                      </div>
 
-                    <AdminTableToolbar 
-                        tableName="Telemarketing" 
-                        onImport={() => setIsImportModalOpen(true)}
-                        onExport={handleExport}
-                        onDeleteAll={handleDeleteAll}
-                        hideSearch={true} 
-                    />
-                    
-                    <DataTable 
-                        columns={columns} 
-                        data={filteredData || []} 
-                        pagination={pagination}
-                        onPaginationChange={setPagination}
-                        sorting={sorting}
-                        onSortingChange={setSorting}
-                        columnFilters={columnFilters}
-                        onColumnFiltersChange={setColumnFilters}
-                        expanded={expandedRows}
-                        onExpandedChange={setExpandedRows}
-                    />
+                     <AdminTableToolbar 
+                         tableName="Telemarketing" 
+                         onImport={() => setIsImportModalOpen(true)}
+                         onExport={handleExport}
+                         onDeleteAll={handleDeleteAll}
+                         hideSearch={true} 
+                     />
+                     
+                     {isGlobalSearchActive ? (
+                        <UnifiedSearchResultsTable 
+                            results={filteredData}
+                            onRowClick={(originalRecord) => {
+                                setSelectedRecord(originalRecord);
+                                setIsDetailModalOpen(true);
+                            }}
+                        />
+                     ) : (
+                        <DataTable 
+                            columns={columns} 
+                            data={filteredData || []} 
+                            pagination={pagination}
+                            onPaginationChange={setPagination}
+                            sorting={sorting}
+                            onSortingChange={setSorting}
+                            columnFilters={columnFilters}
+                            onColumnFiltersChange={setColumnFilters}
+                            expanded={expandedRows}
+                            onExpandedChange={setExpandedRows}
+                        />
+                     )}
                 </div>
             </div>
             

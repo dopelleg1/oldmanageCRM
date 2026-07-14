@@ -19,7 +19,7 @@ const localizer = dateFnsLocalizer({
   locales,
 });
 
-const CustomCalendar = ({ onEventClick }) => {
+const CustomCalendar = ({ onEventClick, searchTerm = '' }) => {
   const { 
     activities, 
     properties, 
@@ -186,26 +186,54 @@ const CustomCalendar = ({ onEventClick }) => {
     });
 
     // FILTERING LOGIC
+    let filteredEvents = allEvents;
     if (['admin', 'super_admin'].includes(userRole)) {
         if (view === 'telemarketing') {
-            return allEvents.filter(e => e.role === 'telemarketing');
+            filteredEvents = allEvents.filter(e => e.role === 'telemarketing');
+        } else {
+            // Admin and Super Admin see all agents, admins, super admins, and general appointments
+            filteredEvents = allEvents.filter(e => 
+                e.role === 'agente' || 
+                e.role === 'admin' || 
+                e.role === 'super_admin' || 
+                e.recordType === 'Appuntamento'
+            );
         }
-        // Admin and Super Admin see all agents, admins, super admins, and general appointments
-        return allEvents.filter(e => 
-            e.role === 'agente' || 
-            e.role === 'admin' || 
-            e.role === 'super_admin' || 
-            e.recordType === 'Appuntamento'
-        );
     } else if (userRole === 'agente') {
-        return allEvents.filter(e => e.agente_id === user.id && (e.role === 'agente' || e.role === 'admin' || e.role === 'super_admin'));
+        filteredEvents = allEvents.filter(e => e.agente_id === user.id && (e.role === 'agente' || e.role === 'admin' || e.role === 'super_admin'));
     } else if (userRole === 'telemarketing') {
         // A telemarketer user should only see telemarketing events
-        return allEvents.filter(e => e.role === 'telemarketing');
+        filteredEvents = allEvents.filter(e => e.role === 'telemarketing');
+    } else {
+        filteredEvents = [];
     }
 
-    return [];
-  }, [activities, properties, potentialTobacconists, potentialActivities, telemarketing, appointments, agentMap, user, userRole, view]);
+    // Apply search filter if searchTerm is specified
+    if (searchTerm.trim() !== '') {
+        const lowerTerm = searchTerm.toLowerCase();
+        filteredEvents = filteredEvents.filter(e => {
+            const check = (val) => {
+                if (val === null || val === undefined) return false;
+                return String(val).toLowerCase().includes(lowerTerm);
+            };
+
+            if (check(e.title)) return true;
+            
+            const agentName = agentMap[e.agente_id]?.name;
+            if (check(agentName)) return true;
+
+            const res = e.resource || {};
+            const fieldsToCheck = [
+                'codice', 'numero', 'nome', 'cognome', 'citta', 'indirizzo', 'zona', 
+                'title', 'note', 'luogo', 'numero_rivendita', 'nome_azienda'
+            ];
+            
+            return fieldsToCheck.some(field => check(res[field]));
+        });
+    }
+
+    return filteredEvents;
+  }, [activities, properties, potentialTobacconists, potentialActivities, telemarketing, appointments, agentMap, user, userRole, view, searchTerm]);
 
   const eventStyleGetter = (event) => {
     let backgroundColor = event.color;

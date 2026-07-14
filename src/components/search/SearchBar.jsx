@@ -11,14 +11,22 @@ const SearchBar = ({
   className,
   resultsCount,
   totalCount,
-  fields = [] // Array of { name, label } for multi-field search
+  fields = [], // Array of { name, label } for multi-field search
+  defaultValue = '' // Add support for default value (restored state)
 }) => {
   // Mode detection
   const isMultiField = fields && fields.length > 0;
 
   // State
-  const [singleTerm, setSingleTerm] = useState('');
+  const [singleTerm, setSingleTerm] = useState(defaultValue);
   const [multiTerms, setMultiTerms] = useState({});
+
+  // Sync state if default value changes (e.g. state restoration)
+  useEffect(() => {
+    if (defaultValue !== undefined) {
+      setSingleTerm(defaultValue);
+    }
+  }, [defaultValue]);
   
   // Debounce values
   const debouncedSingle = useDebounce(singleTerm, 300);

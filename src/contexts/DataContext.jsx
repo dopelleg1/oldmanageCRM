@@ -53,9 +53,7 @@ export const DataProvider = ({ children }) => {
         const tablesWithAgentId = ['properties', 'commercial_activities', 'potential_tobacconists', 'potential_activities', 'appointments', 'telemarketing_contacts'];
         
         if (tablesWithAgentId.includes(tableName)) {
-             if (userRole === 'agente') {
-                query = query.eq('agente_id', user.id);
-            } else if (userRole === 'super_admin' && superAdminFilterMine) {
+            if (userRole === 'super_admin' && superAdminFilterMine) {
                 query = query.eq('agente_id', user.id);
             }
         }

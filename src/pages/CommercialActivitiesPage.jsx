@@ -19,7 +19,8 @@ import { useAuth } from '@/contexts/SupabaseAuthContext';
 import { exportTableToCSV } from '@/utils/csvExportService';
 import { useSessionStorage } from '@/hooks/useSessionStorage';
 import SearchBar from '@/components/search/SearchBar';
-import { useClientSearch } from '@/hooks/useClientSearch';
+import { useUnifiedSearch } from '@/hooks/useUnifiedSearch';
+import UnifiedSearchResultsTable from '@/components/search/UnifiedSearchResultsTable';
 import { usePageStateManager } from '@/hooks/usePageStateManager';
 
 const CommercialActivitiesPage = () => {
@@ -42,7 +43,6 @@ const CommercialActivitiesPage = () => {
   const { saveState, loadState, clearState, hasPersistedState } = usePageStateManager('commercial_activities_pageState');
   const [isRestored, setIsRestored] = useState(false);
   
-  const [searchTerm, setSearchTerm] = useState('');
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: 10 });
   const [sorting, setSorting] = useState([]);
   const [columnFilters, setColumnFilters] = useState([]);
@@ -58,17 +58,26 @@ const CommercialActivitiesPage = () => {
     }));
   }, [activities, agentMap]);
 
-  const { 
-    filteredData, 
-    filteredCount, 
-    totalCount 
-  } = useClientSearch(processedActivities, 'commercial_activities', { externalSearchTerm: searchTerm });
+  const {
+    searchTerm,
+    setSearchTerm,
+    showAllRecords,
+    setShowAllRecords,
+    searchInAllTables,
+    setSearchInAllTables,
+    filteredData,
+    isGlobalSearchActive,
+    totalCount,
+    filteredCount
+  } = useUnifiedSearch(processedActivities, 'commercial_activities');
 
   // Restore search state on mount
   useEffect(() => {
     const saved = loadState();
     if (saved) {
         if (saved.searchTerm !== undefined) setSearchTerm(saved.searchTerm);
+        if (saved.showAllRecords !== undefined) setShowAllRecords(saved.showAllRecords);
+        if (saved.searchInAllTables !== undefined) setSearchInAllTables(saved.searchInAllTables);
         if (saved.pagination) setPagination(saved.pagination);
         if (saved.sorting) setSorting(saved.sorting);
         if (saved.columnFilters) setColumnFilters(saved.columnFilters);
@@ -83,17 +92,21 @@ const CommercialActivitiesPage = () => {
     if (isRestored) {
         saveState({
             searchTerm,
+            showAllRecords,
+            searchInAllTables,
             pagination,
             sorting,
             columnFilters,
             expandedRows
         });
     }
-  }, [searchTerm, pagination, sorting, columnFilters, expandedRows, isRestored, saveState]);
+  }, [searchTerm, showAllRecords, searchInAllTables, pagination, sorting, columnFilters, expandedRows, isRestored, saveState]);
 
   const handleClearFilters = () => {
     clearState();
     setSearchTerm('');
+    setShowAllRecords(false);
+    setSearchInAllTables(false);
     setPagination({ pageIndex: 0, pageSize: 10 });
     setSorting([]);
     setColumnFilters([]);
@@ -274,25 +287,45 @@ const CommercialActivitiesPage = () => {
       <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5 }} className="container mx-auto py-10">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
           <h1 className="text-3xl font-bold">Attività Commerciali</h1>
-          <div className="flex flex-col sm:flex-row gap-2 w-full md:w-auto items-center">
-             <SearchBar 
-                onSearch={setSearchTerm} 
-                placeholder="Cerca attività..." 
-                resultsCount={filteredData?.length || 0}
-                totalCount={totalCount || activities?.length || 0}
-                initialValue={searchTerm}
-                className="w-full md:w-64"
-            />
-            {hasPersistedState && (
-                <Button variant="ghost" size="icon" onClick={handleClearFilters} title="Azzera filtri" className="text-muted-foreground hover:text-destructive">
-                    <XCircle className="h-5 w-5" />
-                </Button>
-            )}
-            <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setIsRemapModalOpen(true)}>
-                    <Map className="mr-2 h-4 w-4" /> <span className="hidden sm:inline">Rimappa</span>
-                </Button>
-                {canPerformActions && <Button onClick={handleCreateNew}><PlusCircle className="mr-2 h-4 w-4" /> Nuova</Button>}
+          <div className="flex flex-col gap-2 w-full md:w-auto">
+            <div className="flex flex-col sm:flex-row gap-2 w-full items-center">
+               <SearchBar 
+                  onSearch={setSearchTerm} 
+                  placeholder="Cerca attività..." 
+                  resultsCount={filteredCount}
+                  totalCount={totalCount}
+                  defaultValue={searchTerm}
+                  className="w-full md:w-64"
+              />
+
+              <div className="flex gap-2">
+                  <Button variant="outline" onClick={() => setIsRemapModalOpen(true)}>
+                      <Map className="mr-2 h-4 w-4" /> <span className="hidden sm:inline">Rimappa</span>
+                  </Button>
+                  {canPerformActions && <Button onClick={handleCreateNew}><PlusCircle className="mr-2 h-4 w-4" /> Nuova</Button>}
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-4 items-center px-1 text-xs text-muted-foreground mt-1">
+              {['agente', 'telemarketing'].includes(userRole) && (
+                <label className="flex items-center gap-2 cursor-pointer select-none">
+                  <input 
+                    type="checkbox" 
+                    checked={showAllRecords} 
+                    onChange={(e) => setShowAllRecords(e.target.checked)}
+                    className="rounded border-gray-300 text-primary focus:ring-primary h-3.5 w-3.5"
+                  />
+                  Mostra record di altri agenti (sola lettura)
+                </label>
+              )}
+              <label className="flex items-center gap-2 cursor-pointer select-none">
+                <input 
+                  type="checkbox" 
+                  checked={searchInAllTables} 
+                  onChange={(e) => setSearchInAllTables(e.target.checked)}
+                  className="rounded border-gray-300 text-primary focus:ring-primary h-3.5 w-3.5"
+                />
+                Cerca in tutte le tabelle
+              </label>
             </div>
           </div>
         </div>
@@ -311,19 +344,30 @@ const CommercialActivitiesPage = () => {
                <RingLoader color={"#2563eb"} size={12} /> Aggiornamento in corso...
             </div>
           )}
-          <DataTable 
-            columns={columns} 
-            data={filteredData || []} 
-            filterPlaceholder="Cerca in locale..." 
-            pagination={pagination}
-            onPaginationChange={setPagination}
-            sorting={sorting}
-            onSortingChange={setSorting}
-            columnFilters={columnFilters}
-            onColumnFiltersChange={setColumnFilters}
-            expanded={expandedRows}
-            onExpandedChange={setExpandedRows}
-          />
+          {isGlobalSearchActive ? (
+            <UnifiedSearchResultsTable 
+              results={filteredData}
+              onRowClick={(originalRecord) => {
+                setSelectedActivity(originalRecord);
+                setIsAdding(false);
+                setIsModalOpen(true);
+              }}
+            />
+          ) : (
+            <DataTable 
+              columns={columns} 
+              data={filteredData || []} 
+              filterPlaceholder="Cerca in locale..." 
+              pagination={pagination}
+              onPaginationChange={setPagination}
+              sorting={sorting}
+              onSortingChange={setSorting}
+              columnFilters={columnFilters}
+              onColumnFiltersChange={setColumnFilters}
+              expanded={expandedRows}
+              onExpandedChange={setExpandedRows}
+            />
+          )}
         </div>
       </motion.div>
 

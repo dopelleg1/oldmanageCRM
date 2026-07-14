@@ -11,7 +11,6 @@ import RecordDetailModal from '@/components/calendar/RecordDetailModal';
 import ImportModal from '@/components/import/ImportModal';
 import RemapCoordinatesModal from '@/components/RemapCoordinatesModal';
 import AdminTableToolbar from '@/components/admin/AdminTableToolbar';
-import PotentialActivitiesDiagnostic from '@/components/debug/PotentialActivitiesDiagnostic';
 import DuplicatesManagementModal from '@/components/duplicates/DuplicatesManagementModal';
 import { Dialog, DialogContent, DialogTrigger } from '@/components/ui/dialog';
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -20,6 +19,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { exportTableToCSV } from '@/utils/csvExportService';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import SearchBar from '@/components/search/SearchBar';
+import { useUnifiedSearch } from '@/hooks/useUnifiedSearch';
+import UnifiedSearchResultsTable from '@/components/search/UnifiedSearchResultsTable';
 import { useSearchStateManager } from '@/hooks/useSearchStateManager';
 import { usePageStateManager } from '@/hooks/usePageStateManager';
 import { RingLoader } from 'react-spinners';
@@ -27,7 +28,7 @@ import { RingLoader } from 'react-spinners';
 const PotentialActivitiesPage = () => {
     const { toast } = useToast();
     const { potentialActivities, loading, fetchAllData, updateRecord } = useData();
-    const { user } = useAuth();
+    const { user, userRole } = useAuth();
     
     // Search State Management
     const { searchState, saveSearchState, clearSearchState, hasPersistedState } = useSearchStateManager('potential_activities');
@@ -38,7 +39,6 @@ const PotentialActivitiesPage = () => {
 
     // UI State initialized from cache if available
     const [currentTab, setCurrentTab] = useState(searchState?.filters?.currentTab || "all");
-    const [searchFilters, setSearchFilters] = useState(searchState?.filters?.searchFilters || {});
 
     const [selectedRecord, setSelectedRecord] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -49,40 +49,38 @@ const PotentialActivitiesPage = () => {
     
     const documentManagerRef = useRef();
 
-    // Filtering Logic
-    const filteredData = useMemo(() => {
+    // 1. Filter by Tab first
+    const tabFilteredData = useMemo(() => {
         if (!potentialActivities) return [];
+        if (currentTab === 'all') return potentialActivities;
+        return potentialActivities.filter(item => (item.type || '').toLowerCase() === currentTab);
+    }, [potentialActivities, currentTab]);
 
-        let data = potentialActivities;
-
-        if (currentTab !== 'all') {
-            data = data.filter(item => (item.type || '').toLowerCase() === currentTab);
-        }
-
-        const activeFilters = Object.entries(searchFilters).filter(([_, value]) => value && value.trim() !== '');
-        
-        if (activeFilters.length > 0) {
-            data = data.filter(item => {
-                return activeFilters.every(([key, value]) => {
-                    const itemValue = item[key];
-                    if (!itemValue) return false;
-                    return String(itemValue).toLowerCase().includes(value.toLowerCase());
-                });
-            });
-        }
-
-        return data;
-    }, [potentialActivities, currentTab, searchFilters]);
+    // 2. Apply Unified Search
+    const {
+        searchTerm,
+        setSearchTerm,
+        showAllRecords,
+        setShowAllRecords,
+        searchInAllTables,
+        setSearchInAllTables,
+        filteredData,
+        isGlobalSearchActive,
+        totalCount,
+        filteredCount
+    } = useUnifiedSearch(tabFilteredData, 'potential_activities');
 
     // Restore state on mount
     useEffect(() => {
         const savedPage = loadPageState();
         if (savedPage) {
             if (savedPage.currentPage !== undefined) setPageIndex(savedPage.currentPage);
-            if (savedPage.filters !== undefined && Object.keys(savedPage.filters).length > 0 && Object.keys(searchFilters).length === 0) {
-                setSearchFilters(savedPage.filters);
+            if (savedPage.searchTerm !== undefined) setSearchTerm(savedPage.searchTerm);
+            if (savedPage.filters) {
+                if (savedPage.filters.currentTab !== undefined) setCurrentTab(savedPage.filters.currentTab);
+                if (savedPage.filters.showAllRecords !== undefined) setShowAllRecords(savedPage.filters.showAllRecords);
+                if (savedPage.filters.searchInAllTables !== undefined) setSearchInAllTables(savedPage.filters.searchInAllTables);
             }
-            if (savedPage.searchTerm !== undefined && currentTab === "all") setCurrentTab(savedPage.searchTerm || "all");
         }
         setIsRestored(true);
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -90,27 +88,31 @@ const PotentialActivitiesPage = () => {
 
     // Save page state
     useEffect(() => {
-        savePageState({
-            currentPage: pageIndex,
-            searchTerm: currentTab || "all",
-            filters: searchFilters || {},
-            sortBy: [],
-            expandedRows: {}
-        });
-    }, [pageIndex, currentTab, searchFilters, savePageState]);
+        if (isRestored) {
+            savePageState({
+                currentPage: pageIndex,
+                searchTerm: searchTerm || "",
+                filters: { currentTab, showAllRecords, searchInAllTables },
+                sortBy: [],
+                expandedRows: {}
+            });
+        }
+    }, [pageIndex, currentTab, searchTerm, showAllRecords, searchInAllTables, isRestored, savePageState]);
 
     // Save search state when filters or data change
     useEffect(() => {
         if (!loading && isRestored) {
-            saveSearchState(filteredData, { currentTab, searchFilters }, 1, '');
+            saveSearchState(filteredData, { currentTab, showAllRecords, searchInAllTables }, 1, searchTerm);
             setCachedResults(filteredData);
         }
-    }, [currentTab, searchFilters, filteredData, loading, isRestored, saveSearchState]);
+    }, [currentTab, showAllRecords, searchInAllTables, filteredData, loading, isRestored, saveSearchState, searchTerm]);
 
     const handleClearFilters = () => {
         clearSearchState();
         setCurrentTab("all");
-        setSearchFilters({});
+        setSearchTerm('');
+        setShowAllRecords(false);
+        setSearchInAllTables(false);
         setCachedResults(null);
         setPageIndex(0);
         toast({ title: "Filtri azzerati", description: "La vista è stata ripristinata allo stato iniziale." });
@@ -354,24 +356,48 @@ const PotentialActivitiesPage = () => {
                         <p className="text-muted-foreground mt-1">Gestione completa acquirenti e venditori.</p>
                     </div>
                     
-                    <div className="flex flex-wrap gap-2">
-                         <Dialog>
-                            <DialogTrigger asChild>
-                                <Button variant="secondary" className="gap-2">
-                                    <Stethoscope className="h-4 w-4" /> Diagnostica
+                    <div className="flex flex-col gap-2 w-full md:w-auto">
+                        <div className="flex flex-col sm:flex-row gap-2 w-full items-center">
+                            <SearchBar 
+                                onSearch={setSearchTerm} 
+                                placeholder="Cerca potenziali..." 
+                                resultsCount={filteredCount}
+                                totalCount={totalCount}
+                                defaultValue={searchTerm}
+                                className="w-full md:w-64"
+                            />
+                            
+                            <div className="flex gap-2">
+                                <Button variant="outline" onClick={() => setIsRemapModalOpen(true)}>
+                                    <Map className="mr-2 h-4 w-4" /> <span className="hidden sm:inline">Rimappa</span>
                                 </Button>
-                            </DialogTrigger>
-                            <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
-                                <PotentialActivitiesDiagnostic onFixComplete={fetchAllData} />
-                            </DialogContent>
-                        </Dialog>
-
-                         <Button variant="outline" onClick={() => setIsRemapModalOpen(true)}>
-                            <Map className="mr-2 h-4 w-4" /> Rimappa
-                        </Button>
-                        <Button onClick={() => { setSelectedRecord({ recordType: 'Potenziale Acquirente/Venditore' }); setIsDetailModalOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
-                            <Plus className="mr-2 h-4 w-4"/> Aggiungi Nuovo
-                        </Button>
+                                <Button onClick={() => { setSelectedRecord({ recordType: 'Potenziale Acquirente/Venditore' }); setIsDetailModalOpen(true); }} className="bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
+                                    <Plus className="mr-2 h-4 w-4"/> <span className="hidden sm:inline">Aggiungi</span>
+                                </Button>
+                            </div>
+                        </div>
+                        <div className="flex flex-wrap gap-4 items-center px-1 text-xs text-muted-foreground mt-1">
+                          {['agente', 'telemarketing'].includes(userRole) && (
+                            <label className="flex items-center gap-2 cursor-pointer select-none">
+                              <input 
+                                type="checkbox" 
+                                checked={showAllRecords} 
+                                onChange={(e) => setShowAllRecords(e.target.checked)}
+                                className="rounded border-gray-300 text-primary focus:ring-primary h-3.5 w-3.5"
+                              />
+                              Mostra record di altri agenti (sola lettura)
+                            </label>
+                          )}
+                          <label className="flex items-center gap-2 cursor-pointer select-none">
+                            <input 
+                              type="checkbox" 
+                              checked={searchInAllTables} 
+                              onChange={(e) => setSearchInAllTables(e.target.checked)}
+                              className="rounded border-gray-300 text-primary focus:ring-primary h-3.5 w-3.5"
+                            />
+                            Cerca in tutte le tabelle
+                          </label>
+                        </div>
                     </div>
                 </div>
                 
@@ -392,11 +418,7 @@ const PotentialActivitiesPage = () => {
                         </Tabs>
 
                         <div className="flex gap-2 w-full md:w-auto justify-end">
-                            {hasPersistedState && (
-                                <Button variant="ghost" size="icon" onClick={handleClearFilters} title="Azzera filtri" className="text-muted-foreground hover:text-destructive">
-                                    <XCircle className="h-5 w-5" />
-                                </Button>
-                            )}
+
 
                             <Button variant="outline" size="icon" onClick={() => fetchAllData()} title="Ricarica">
                                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
@@ -425,19 +447,7 @@ const PotentialActivitiesPage = () => {
                         hideSearch={true} 
                     />
 
-                    <div className="bg-slate-50 p-3 rounded-md border">
-                        <div className="flex items-center gap-2 mb-2 text-sm font-medium text-slate-600">
-                            <Filter className="h-4 w-4" />
-                            Filtri di ricerca
-                        </div>
-                        <SearchBar 
-                            fields={searchFields}
-                            onSearch={setSearchFilters}
-                            resultsCount={displayData.length}
-                            totalCount={potentialActivities?.length || 0}
-                            initialValue={searchFilters}
-                        />
-                    </div>
+
 
                     <div className="relative">
                         {loading && cachedResults && (
@@ -445,12 +455,22 @@ const PotentialActivitiesPage = () => {
                                 <RingLoader color={"#2563eb"} size={12} /> Aggiornamento in corso...
                             </div>
                         )}
-                        <DataTable 
-                            columns={columns} 
-                            data={displayData} 
-                            pageIndex={pageIndex}
-                            onPageIndexChange={setPageIndex}
-                        />
+                        {isGlobalSearchActive ? (
+                            <UnifiedSearchResultsTable 
+                                results={displayData}
+                                onRowClick={(originalRecord) => {
+                                    setSelectedRecord(originalRecord);
+                                    setIsDetailModalOpen(true);
+                                }}
+                            />
+                        ) : (
+                            <DataTable 
+                                columns={columns} 
+                                data={displayData} 
+                                pageIndex={pageIndex}
+                                onPageIndexChange={setPageIndex}
+                            />
+                        )}
                     </div>
                 </div>
             </div>
