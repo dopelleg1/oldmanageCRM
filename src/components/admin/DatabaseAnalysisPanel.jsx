@@ -4,7 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { useToast } from '@/components/ui/use-toast';
-import { Loader2, Search, Download, Copy, Database, Server, Cloud } from 'lucide-react';
+import { Loader2, Search, Download, Copy, Database, Server, Cloud, RefreshCw } from 'lucide-react';
 import DatabaseAnalysisTable from './DatabaseAnalysisTable';
 import StorageAnalysisTable from './StorageAnalysisTable';
 import CloudStorageAnalysisTable from './CloudStorageAnalysisTable';
@@ -16,6 +16,7 @@ import CloudStorageCharts from './CloudStorageCharts';
 const DatabaseAnalysisPanel = () => {
     const { toast } = useToast();
     const [loading, setLoading] = useState(false);
+    const [syncing, setSyncing] = useState(false);
     const [dbData, setDbData] = useState([]);
     const [storageData, setStorageData] = useState([]);
     const [cloudData, setCloudData] = useState({ stats: null, folders: [], files: [] });
@@ -26,6 +27,28 @@ const DatabaseAnalysisPanel = () => {
     const [filterType, setFilterType] = useState('all');
     const [folderFilter, setFolderFilter] = useState('all');
     const [sortOrder, setSortOrder] = useState('date_desc');
+
+    const syncSchemaCache = async () => {
+        setSyncing(true);
+        try {
+            const { error } = await supabase.rpc('reload_schema_cache');
+            if (error) throw error;
+            toast({
+                title: "Cache Sincronizzata",
+                description: "La cache dello schema API è stata aggiornata con successo.",
+                className: "bg-green-50 border-green-200"
+            });
+        } catch (error) {
+            console.error("Sync Cache Error:", error);
+            toast({
+                title: "Errore Sincronizzazione",
+                description: "Assicurati di aver creato la funzione 'reload_schema_cache' nel SQL Editor di Supabase. Dettaglio: " + error.message,
+                variant: "destructive"
+            });
+        } finally {
+            setSyncing(false);
+        }
+    };
 
     const runAnalysis = async () => {
         setLoading(true);
@@ -178,6 +201,10 @@ const DatabaseAnalysisPanel = () => {
                             </Button>
                         </>
                     )}
+                    <Button variant="outline" onClick={syncSchemaCache} disabled={loading || syncing} className="border-indigo-200 text-indigo-700 hover:bg-indigo-50 w-full sm:w-auto">
+                        {syncing ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2 text-indigo-500" />}
+                        Sincronizza Cache DB
+                    </Button>
                     <Button onClick={runAnalysis} disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto">
                         {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
                         Avvia Analisi Completa
