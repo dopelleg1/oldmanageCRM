@@ -53,9 +53,18 @@ export const useUnifiedSearch = (baseData, tableName) => {
 
     return visibleData
       .filter(item => {
-        const checkValue = (val) => {
+        const checkValue = (val, fieldName) => {
           if (val === null || val === undefined) return false;
-          return String(val).toLowerCase().includes(lowerTerm);
+          const strVal = String(val).toLowerCase();
+          
+          if (fieldName && (fieldName.includes('telefono') || fieldName.includes('phone'))) {
+            const cleanVal = strVal.replace(/\D/g, '');
+            const cleanTerm = lowerTerm.replace(/\D/g, '');
+            if (cleanTerm) {
+              return cleanVal.includes(cleanTerm);
+            }
+          }
+          return strVal.includes(lowerTerm);
         };
 
         return fields.some(field => {
@@ -64,7 +73,7 @@ export const useUnifiedSearch = (baseData, tableName) => {
             const codeValSpace = `${item.codice || ''} - ${item.numero || ''}`;
             return checkValue(codeVal) || checkValue(codeValSpace);
           }
-          return checkValue(item[field]);
+          return checkValue(item[field], field);
         });
       })
       .map(item => ({
@@ -87,11 +96,11 @@ export const useUnifiedSearch = (baseData, tableName) => {
     // 1. If global search is active and term is not empty
     if (searchInAllTables && searchTerm.trim() !== '') {
       const results = [
-        ...searchDataset(activities, 'commercial_activities', 'Attività Commerciale', ['codice', 'numero', 'categoria', 'citta', 'indirizzo', 'stato', 'full_code']),
-        ...searchDataset(properties, 'properties', 'Immobile', ['codice', 'numero', 'citta', 'indirizzo', 'zona', 'stato', 'full_code', 'nome_proprietario', 'cognome_proprietario']),
-        ...searchDataset(potentialTobacconists, 'potential_tobacconists', 'Potenziale Tabaccheria', ['numero_rivendita', 'nome', 'cognome', 'citta', 'zona', 'indirizzo']),
-        ...searchDataset(potentialActivities, 'potential_activities', 'Potenziale Acquirente/Venditore', ['nome', 'cognome', 'email', 'telefono', 'numero', 'note', 'citta', 'zona']),
-        ...searchDataset(telemarketing, 'telemarketing_contacts', 'Telemarketing', ['nome_azienda', 'nome', 'cognome', 'telefono', 'email', 'citta', 'indirizzo'])
+        ...searchDataset(activities, 'commercial_activities', 'Attività Commerciale', getSearchableFields('commercial_activities')),
+        ...searchDataset(properties, 'properties', 'Immobile', getSearchableFields('properties')),
+        ...searchDataset(potentialTobacconists, 'potential_tobacconists', 'Potenziale Tabaccheria', getSearchableFields('potential_tobacconists')),
+        ...searchDataset(potentialActivities, 'potential_activities', 'Potenziale Acquirente/Venditore', getSearchableFields('potential_activities')),
+        ...searchDataset(telemarketing, 'telemarketing_contacts', 'Telemarketing', getSearchableFields('telemarketing_contacts'))
       ];
 
       // Sort by creation date
@@ -114,9 +123,18 @@ export const useUnifiedSearch = (baseData, tableName) => {
     const fields = getSearchableFields(tableName);
 
     return localFiltered.filter(item => {
-      const checkValue = (val) => {
+      const checkValue = (val, fieldName) => {
         if (val === null || val === undefined) return false;
-        return String(val).toLowerCase().includes(lowerTerm);
+        const strVal = String(val).toLowerCase();
+        
+        if (fieldName && (fieldName.includes('telefono') || fieldName.includes('phone'))) {
+          const cleanVal = strVal.replace(/\D/g, '');
+          const cleanTerm = lowerTerm.replace(/\D/g, '');
+          if (cleanTerm) {
+            return cleanVal.includes(cleanTerm);
+          }
+        }
+        return strVal.includes(lowerTerm);
       };
 
       return fields.some(field => {
@@ -125,7 +143,7 @@ export const useUnifiedSearch = (baseData, tableName) => {
           const codeValSpace = `${item.codice || ''} - ${item.numero || ''}`;
           return checkValue(codeVal) || checkValue(codeValSpace);
         }
-        return checkValue(item[field]);
+        return checkValue(item[field], field);
       });
     });
   }, [
