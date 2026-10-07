@@ -23,7 +23,7 @@ import { RingLoader } from 'react-spinners';
 
 const PotentialTobacconistsPage = () => {
     const { toast } = useToast();
-    const { potentialTobacconists, loading, fetchAllData } = useData();
+    const { potentialTobacconists, loading, fetchAllData, fetchTable } = useData();
     const { user, userRole } = useAuth();
     const { getFormData } = useSessionStorage();
 
@@ -120,10 +120,10 @@ const PotentialTobacconistsPage = () => {
 
     const handleImportSuccess = async () => { 
         toast({ title: "Importazione completata!" }); 
-        await fetchAllData(); 
+        await fetchTable('potential_tobacconists', true); 
     };
     
-    const handleRemapClose = async () => { setIsRemapModalOpen(false); await fetchAllData(); };
+    const handleRemapClose = async () => { setIsRemapModalOpen(false); await fetchTable('potential_tobacconists', true); };
 
     const displayData = (loading && cachedResults) ? cachedResults : filteredData;
     const isActuallyLoading = loading && !cachedResults;
@@ -148,7 +148,7 @@ const PotentialTobacconistsPage = () => {
             toast({ title: "Errore", description: error.message, variant: "destructive" });
         } else {
             toast({ title: "Successo", description: "Dati eliminati." }); 
-            fetchAllData(); 
+            await fetchTable('potential_tobacconists', true); 
         }
     };
 
@@ -181,7 +181,7 @@ const PotentialTobacconistsPage = () => {
             if (error) throw error;
 
             toast({ title: "Salvato!", description: "Tabaccheria creata.", className: "bg-green-50 border-green-200" });
-            await fetchAllData();
+            await fetchTable('potential_tobacconists', true);
             return { success: true };
         } catch (error) {
             toast({ title: "Errore salvataggio", description: error.message, variant: "destructive" });
@@ -195,7 +195,7 @@ const PotentialTobacconistsPage = () => {
             const { error } = await supabase.from('potential_tobacconists').update(recordToSave).eq('id', recordToSave.id);
             if (error) throw error;
             toast({ title: "Aggiornato!", description: "Modifiche salvate." });
-            await fetchAllData();
+            await fetchTable('potential_tobacconists', true);
             return { success: true };
         } catch (error) {
             toast({ title: "Errore aggiornamento", description: error.message, variant: "destructive" });
@@ -351,7 +351,7 @@ const PotentialTobacconistsPage = () => {
                 onClose={() => setIsDuplicatesModalOpen(false)}
                 tableName="potential_tobacconists"
                 keyField="telefono"
-                onComplete={fetchAllData}
+                onComplete={() => fetchTable('potential_tobacconists', true)}
             />
         </>
     );

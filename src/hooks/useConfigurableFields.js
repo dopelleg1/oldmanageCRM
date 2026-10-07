@@ -1,59 +1,12 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
+import { useData } from '@/contexts/DataContext';
 
 export const useConfigurableFields = () => {
-  const [configurations, setConfigurations] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  const fetchConfigurations = useCallback(async () => {
-    try {
-      const { data, error } = await supabase
-        .from('configurations')
-        .select('*')
-        .order('value', { ascending: true });
-        
-      if (error) throw error;
-      setConfigurations(data || []);
-    } catch (err) {
-      setError(err);
-      console.error('Error fetching configurations:', err);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchConfigurations();
-
-    const channel = supabase
-      .channel('schema-db-changes-configurations')
-      .on(
-        'postgres_changes',
-        {
-          event: '*',
-          schema: 'public',
-          table: 'configurations',
-        },
-        (payload) => {
-            if(payload.eventType === 'INSERT') {
-                setConfigurations(prev => {
-                    // Prevent duplicates just in case
-                    const exists = prev.some(p => p.id === payload.new.id);
-                    if (exists) return prev;
-                    return [...prev, payload.new].sort((a,b) => a.value.localeCompare(b.value));
-                });
-            } else {
-                fetchConfigurations();
-            }
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [fetchConfigurations]);
+  const dataContext = useData();
+  const configurations = dataContext?.configurations || [];
+  const addRecord = dataContext?.addRecord;
+  const loading = dataContext?.loading || false;
 
   const getFieldOptions = useCallback((fieldName) => {
     return configurations
@@ -72,14 +25,10 @@ export const useConfigurableFields = () => {
     if (!value) return null;
     try {
       const trimmedValue = value.trim();
-      // Check if exists one last time to avoid race conditions/duplicates
-      const { data: existing } = await supabase
-        .from('configurations')
-        .select('id')
-        .eq('type', fieldName)
-        .ilike('value', trimmedValue)
-        .maybeSingle();
-
+      // Check in local configurations first to avoid extra DB query
+      const existing = configurations.find(
+        opt => opt.type === fieldName && opt.value.toLowerCase() === trimmedValue.toLowerCase()
+      );
       if (existing) return existing;
 
       const { data, error } = await supabase
@@ -89,12 +38,15 @@ export const useConfigurableFields = () => {
         .single();
 
       if (error) throw error;
+      if (data && addRecord) {
+        addRecord('configurations', data);
+      }
       return data;
     } catch (err) {
       console.error(`Error adding new option for ${fieldName}:`, err);
       throw err;
     }
-  }, []);
+  }, [configurations, addRecord]);
 
   return {
     configurations,
@@ -102,6 +54,6 @@ export const useConfigurableFields = () => {
     fieldExists,
     addNewOption,
     loading,
-    error
+    error: null
   };
 };

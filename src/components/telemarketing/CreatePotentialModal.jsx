@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils';
 import { useFormDraftManager } from '@/hooks/useFormDraftManager';
 
 const CreatePotentialModal = ({ isOpen, onClose, contact }) => {
-    const { addRecord, updateRecord, fetchAllData, configurations } = useData();
+    const { addRecord, updateRecord, fetchTable, configurations } = useData();
     const { user } = useAuth();
     const { toast } = useToast();
     
@@ -202,7 +202,7 @@ const CreatePotentialModal = ({ isOpen, onClose, contact }) => {
             });
             
             clearDraft(); // Clear draft on success
-            fetchAllData(); 
+            await fetchTable(tableName, true); 
             onClose();
 
         } catch (error) {

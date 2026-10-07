@@ -21,7 +21,7 @@ import { usePageStateManager } from '@/hooks/usePageStateManager';
 
 const PropertiesPage = () => {
     const { toast } = useToast();
-    const { properties, loading, fetchAllData } = useData();
+    const { properties, loading, fetchAllData, fetchTable } = useData();
     const { user, userRole } = useAuth();
     const { getFormData } = useSessionStorage();
     const { saveState, loadState } = usePageStateManager('properties_pageState');
@@ -87,12 +87,12 @@ const PropertiesPage = () => {
 
     const handleImportSuccess = async () => { 
         toast({ title: "Importazione completata!", description: "Dati importati." }); 
-        await fetchAllData(); 
+        await fetchTable('properties', true); 
     };
     
     const handleRemapClose = async () => { 
         setIsRemapModalOpen(false); 
-        await fetchAllData(); 
+        await fetchTable('properties', true); 
     };
 
     const handleExport = async () => {
@@ -115,7 +115,7 @@ const PropertiesPage = () => {
             toast({ title: "Errore", description: error.message, variant: "destructive" });
         } else {
             toast({ title: "Successo", description: "Tutti gli immobili sono stati eliminati." }); 
-            fetchAllData(); 
+            await fetchTable('properties', true); 
         }
     };
 
@@ -129,7 +129,7 @@ const PropertiesPage = () => {
             if (error) throw error;
 
             toast({ title: "Salvato!", description: "Immobile creato.", className: "bg-green-50 border-green-200" });
-            await fetchAllData();
+            await fetchTable('properties', true);
             return { success: true };
         } catch (error) {
             toast({ title: "Errore", description: error.message, variant: "destructive" });
@@ -143,7 +143,7 @@ const PropertiesPage = () => {
             const { error } = await supabase.from('properties').update(recordToSave).eq('id', recordToSave.id);
             if (error) throw error;
             toast({ title: "Aggiornato!", description: "Modifiche salvate." });
-            await fetchAllData();
+            await fetchTable('properties', true);
             return { success: true };
         } catch (error) {
             toast({ title: "Errore", description: error.message, variant: "destructive" });
@@ -307,7 +307,7 @@ const PropertiesPage = () => {
                 onClose={() => setIsDuplicatesModalOpen(false)}
                 tableName="properties"
                 keyField="codice" 
-                onComplete={fetchAllData}
+                onComplete={() => fetchTable('properties', true)}
             />
         </>
     );

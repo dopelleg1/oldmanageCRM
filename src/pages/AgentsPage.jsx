@@ -36,7 +36,7 @@ import { useFormDraftManager } from '@/hooks/useFormDraftManager';
 
 const AgentsPage = () => {
     const { toast } = useToast();
-    const { agents, loading, deleteRecord, fetchAllData } = useData();
+    const { agents, loading, deleteRecord, fetchAllData, fetchTable } = useData();
     const { userRole, user: currentUser } = useAuth();
     
     // Draft Manager
@@ -201,7 +201,7 @@ const AgentsPage = () => {
             clearDraft();
             setFormData({ name: '', email: '', role: 'agente', color: '#3b82f6', password: '' });
             setIsAddModalOpen(false);
-            await fetchAllData();
+            await fetchTable('agents', true);
 
         } catch (error) {
             console.error("Error creating agent:", error);
@@ -228,7 +228,7 @@ const AgentsPage = () => {
 
             toast({ title: "Successo", description: "Profilo agente aggiornato." });
             setIsEditModalOpen(false);
-            await fetchAllData();
+            await fetchTable('agents', true);
 
         } catch (error) {
              toast({ title: "Errore", description: `Impossibile aggiornare: ${error.message}`, variant: "destructive" });

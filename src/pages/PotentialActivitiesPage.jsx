@@ -27,7 +27,7 @@ import { RingLoader } from 'react-spinners';
 
 const PotentialActivitiesPage = () => {
     const { toast } = useToast();
-    const { potentialActivities, loading, fetchAllData, updateRecord } = useData();
+    const { potentialActivities, loading, fetchAllData, fetchTable, updateRecord } = useData();
     const { user, userRole } = useAuth();
     
     // Search State Management
@@ -130,10 +130,10 @@ const PotentialActivitiesPage = () => {
 
     const handleImportSuccess = async () => { 
         toast({ title: "Importazione completata!" }); 
-        await fetchAllData(); 
+        await fetchTable('potential_activities', true); 
     };
     
-    const handleRemapClose = async () => { setIsRemapModalOpen(false); await fetchAllData(); };
+    const handleRemapClose = async () => { setIsRemapModalOpen(false); await fetchTable('potential_activities', true); };
 
     const displayData = (loading && cachedResults) ? cachedResults : filteredData;
     const isActuallyLoading = loading && !cachedResults;
@@ -158,7 +158,7 @@ const PotentialActivitiesPage = () => {
             const { error } = await supabase.from('potential_activities').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             if (error) throw error;
             toast({ title: "Tabella svuotata", description: "Dati eliminati." }); 
-            await fetchAllData(); 
+            await fetchTable('potential_activities', true); 
         } catch (error) {
             toast({ title: "Errore Cancellazione", description: error.message, variant: "destructive" });
         } finally {
@@ -208,7 +208,7 @@ const PotentialActivitiesPage = () => {
                 }
             }
             toast({ title: "Salvato!", className: "bg-green-50 border-green-200 text-green-900" });
-            await fetchAllData();
+            await fetchTable('potential_activities', true);
             return { success: true };
         } catch (error) {
             toast({ title: "Errore", description: error.message, variant: "destructive" });
@@ -240,7 +240,7 @@ const PotentialActivitiesPage = () => {
             }
 
             toast({ title: "Aggiornato!", className: "bg-green-50 border-green-200 text-green-900" });
-            await fetchAllData();
+            await fetchTable('potential_activities', true);
             
             return { success: true };
         } catch (error) {
@@ -420,7 +420,7 @@ const PotentialActivitiesPage = () => {
                         <div className="flex gap-2 w-full md:w-auto justify-end">
 
 
-                            <Button variant="outline" size="icon" onClick={() => fetchAllData()} title="Ricarica">
+                            <Button variant="outline" size="icon" onClick={() => fetchTable('potential_activities', true)} title="Ricarica">
                                 <RefreshCw className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
                             </Button>
                             
@@ -497,7 +497,7 @@ const PotentialActivitiesPage = () => {
                 onClose={() => setIsDuplicatesModalOpen(false)}
                 tableName="potential_activities"
                 keyField="telefono"
-                onComplete={fetchAllData}
+                onComplete={() => fetchTable('potential_activities', true)}
             />
         </>
     );

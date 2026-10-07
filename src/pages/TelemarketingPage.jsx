@@ -21,7 +21,7 @@ import UnifiedSearchResultsTable from '@/components/search/UnifiedSearchResultsT
 
 const TelemarketingPage = () => {
     const { toast } = useToast();
-    const { telemarketing, loading, fetchAllData } = useData();
+    const { telemarketing, loading, fetchAllData, fetchTable } = useData();
     const { user, userRole } = useAuth();
     const { getFormData } = useSessionStorage();
     
@@ -105,12 +105,12 @@ const TelemarketingPage = () => {
 
     const handleImportSuccess = async () => { 
         toast({ title: "Importazione completata!" }); 
-        await fetchAllData(); 
+        await fetchTable('telemarketing_contacts', true); 
     };
     
     const handleRemapClose = async () => { 
         setIsRemapModalOpen(false); 
-        await fetchAllData(); 
+        await fetchTable('telemarketing_contacts', true); 
     };
 
     const handleExport = async () => {
@@ -132,7 +132,7 @@ const TelemarketingPage = () => {
             const { error } = await supabase.from('telemarketing_contacts').delete().neq('id', '00000000-0000-0000-0000-000000000000');
             if (error) throw error;
             toast({ title: "Successo", description: "Tabella svuotata" });
-            await fetchAllData();
+            await fetchTable('telemarketing_contacts', true);
         } catch (error) {
             toast({ title: "Errore", description: error.message, variant: "destructive" });
         }
@@ -148,7 +148,7 @@ const TelemarketingPage = () => {
             if (error) throw error;
 
             toast({ title: "Salvato!", className: "bg-green-50 border-green-200 text-green-900" });
-            await fetchAllData();
+            await fetchTable('telemarketing_contacts', true);
             return { success: true };
         } catch (error) {
             toast({ title: "Errore salvataggio", description: error.message, variant: "destructive" });
@@ -163,7 +163,7 @@ const TelemarketingPage = () => {
             if (error) throw error;
             
             toast({ title: "Salvato!", className: "bg-green-50 border-green-200 text-green-900" });
-            await fetchAllData();
+            await fetchTable('telemarketing_contacts', true);
             return { success: true };
         } catch (error) {
             toast({ title: "Errore aggiornamento", description: error.message, variant: "destructive" });
@@ -282,7 +282,7 @@ const TelemarketingPage = () => {
                             </div>
                         </div>
                         <div className="flex gap-2">
-                            <Button variant="outline" size="sm" onClick={() => fetchAllData()} title="Ricarica">
+                            <Button variant="outline" size="sm" onClick={() => fetchTable('telemarketing_contacts', true)} title="Ricarica">
                                 <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
                                 Aggiorna
                             </Button>

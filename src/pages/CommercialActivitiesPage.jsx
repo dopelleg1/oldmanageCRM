@@ -24,7 +24,7 @@ import UnifiedSearchResultsTable from '@/components/search/UnifiedSearchResultsT
 import { usePageStateManager } from '@/hooks/usePageStateManager';
 
 const CommercialActivitiesPage = () => {
-  const { activities, agents, loading, fetchAllData, deleteRecord } = useData();
+  const { activities, agents, loading, fetchAllData, fetchTable, deleteRecord } = useData();
   const { toast } = useToast();
   const { user, userRole } = useAuth();
   const { getFormData } = useSessionStorage();
@@ -213,7 +213,7 @@ const CommercialActivitiesPage = () => {
     try {
         const { error } = await supabase.from('commercial_activities').insert(recordToSave);
         if (error) throw error;
-        await fetchAllData();
+        await fetchTable('commercial_activities', true);
         toast({ title: "Successo", description: "Nuova attività creata." });
         return { success: true };
     } catch (error) {
@@ -227,7 +227,7 @@ const CommercialActivitiesPage = () => {
       try {
           const { error } = await supabase.from('commercial_activities').update(recordToSave).eq('id', recordToSave.id);
           if (error) throw error;
-          await fetchAllData();
+          await fetchTable('commercial_activities', true);
           toast({ title: "Successo", description: "Attività aggiornata." });
           return { success: true };
       } catch (error) {
@@ -251,12 +251,12 @@ const CommercialActivitiesPage = () => {
   const handleDeleteAll = async () => {
       const { error } = await supabase.from('commercial_activities').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       if (error) toast({ title: "Errore", description: error.message, variant: "destructive" });
-      else { toast({ title: "Successo", description: "Dati eliminati." }); fetchAllData(); }
+      else { toast({ title: "Successo", description: "Dati eliminati." }); await fetchTable('commercial_activities', true); }
   };
 
   const handleImportSuccess = async () => {
     toast({ title: "Importazione completata!" });
-    await fetchAllData();
+    await fetchTable('commercial_activities', true);
   };
 
   const handleExport = async () => {
@@ -273,7 +273,7 @@ const CommercialActivitiesPage = () => {
       }
   };
   
-  const handleRemapClose = async () => { setIsRemapModalOpen(false); await fetchAllData(); };
+  const handleRemapClose = async () => { setIsRemapModalOpen(false); await fetchTable('commercial_activities', true); };
 
   if (loading && !isRestored) {
     return <div className="flex items-center justify-center h-screen"><RingLoader color={"#36d7b7"} loading={loading} size={150} /></div>;
@@ -392,7 +392,7 @@ const CommercialActivitiesPage = () => {
         onClose={() => setIsDuplicatesModalOpen(false)}
         tableName="commercial_activities"
         keyField="telefono_proprietario"
-        onComplete={fetchAllData}
+        onComplete={() => fetchTable('commercial_activities', true)}
       />
 
       <AlertDialog open={!!recordToDelete} onOpenChange={(open) => !open && setRecordToDelete(null)}>

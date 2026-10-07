@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useToast } from '@/components/ui/use-toast';
 import { useAuth } from '@/contexts/SupabaseAuthContext';
@@ -37,6 +37,12 @@ export const DataProvider = ({ children }) => {
 
     const { toast } = useToast();
     const { user, userRole } = useAuth();
+
+    // Cache timestamps and in-flight request trackers
+    const lastFetchedAt = useRef({});
+    const inFlightRequests = useRef({});
+    const fetchAllDataPromise = useRef(null);
+    const initialFetchedRef = useRef(false);
 
     const toggleSuperAdminFilter = useCallback(() => {
         setSuperAdminFilterMine(prev => !prev);
@@ -109,45 +115,90 @@ export const DataProvider = ({ children }) => {
         return formattedData;
     }, [toast, user, userRole, superAdminFilterMine]);
 
-    const fetchAllData = useCallback(async () => {
+    // Table to setter and recordType mapping
+    const tableConfigMap = useRef({
+        'agents': { setter: setAgents, recordType: 'Agente' },
+        'configurations': { setter: setConfigurations },
+        'documents': { setter: setDocuments },
+        'properties': { setter: setProperties, recordType: 'Immobile' },
+        'commercial_activities': { setter: setActivities, recordType: 'Attività Commerciale' },
+        'potential_tobacconists': { setter: setPotentialTobacconists, recordType: 'Potenziale Tabaccheria' },
+        'potential_activities': { setter: setPotentialActivities, recordType: 'Potenziale Acquirente/Venditore' },
+        'appointments': { setter: setAppointments, recordType: 'Appuntamento' },
+        'telemarketing_contacts': { setter: setTelemarketing, recordType: 'Telemarketing' }
+    });
+
+    // Fetch a single table on-demand with caching and deduplication
+    const fetchTable = useCallback(async (tableName, force = false) => {
+        if (!user || !userRole) return [];
+        
+        const CACHE_TTL_MS = 3 * 60 * 1000; // 3 minutes cache per table
+        const now = Date.now();
+        const last = lastFetchedAt.current[tableName] || 0;
+        
+        if (!force && (now - last < CACHE_TTL_MS)) {
+            return;
+        }
+
+        if (inFlightRequests.current[tableName]) {
+            return inFlightRequests.current[tableName];
+        }
+
+        const config = tableConfigMap.current[tableName];
+        if (!config) return [];
+
+        const requestPromise = (async () => {
+            try {
+                const data = await fetchData(tableName, config.setter, config.recordType);
+                lastFetchedAt.current[tableName] = Date.now();
+                return data;
+            } finally {
+                delete inFlightRequests.current[tableName];
+            }
+        })();
+
+        inFlightRequests.current[tableName] = requestPromise;
+        return requestPromise;
+    }, [user, userRole, fetchData]);
+
+    const fetchAllData = useCallback(async ({ force = false } = {}) => {
         if (!user || !userRole) return;
-        setLoading(true);
         
-        const commonFetches = [
-            fetchData('agents', setAgents, 'Agente'),
-            fetchData('configurations', setConfigurations),
-            fetchData('documents', setDocuments),
-        ];
-
-        let roleSpecificFetches = [];
-
-        if (['admin', 'agente', 'telemarketing', 'super_admin'].includes(userRole)) {
-             roleSpecificFetches = [
-                fetchData('properties', setProperties, 'Immobile'),
-                fetchData('commercial_activities', setActivities, 'Attività Commerciale'),
-                fetchData('potential_tobacconists', setPotentialTobacconists, 'Potenziale Tabaccheria'),
-                fetchData('potential_activities', setPotentialActivities, 'Potenziale Acquirente/Venditore'),
-                fetchData('appointments', setAppointments, 'Appuntamento'),
-            ];
-        }
-        
-        if (['admin', 'telemarketing', 'super_admin'].includes(userRole)) {
-             roleSpecificFetches.push(fetchData('telemarketing_contacts', setTelemarketing, 'Telemarketing'));
+        if (fetchAllDataPromise.current) {
+            return fetchAllDataPromise.current;
         }
 
-        await Promise.all([...commonFetches, ...roleSpecificFetches]);
-        setLoading(false);
-    }, [fetchData, user, userRole]);
+        const p = (async () => {
+            setLoading(true);
+            try {
+                const tablesToFetch = ['agents', 'configurations', 'documents'];
 
+                if (['admin', 'agente', 'telemarketing', 'super_admin'].includes(userRole)) {
+                    tablesToFetch.push('properties', 'commercial_activities', 'potential_tobacconists', 'potential_activities', 'appointments');
+                }
+                
+                if (['admin', 'telemarketing', 'super_admin'].includes(userRole)) {
+                    tablesToFetch.push('telemarketing_contacts');
+                }
+
+                await Promise.all(tablesToFetch.map(tbl => fetchTable(tbl, force)));
+            } finally {
+                setLoading(false);
+                fetchAllDataPromise.current = null;
+            }
+        })();
+
+        fetchAllDataPromise.current = p;
+        return p;
+    }, [user, userRole, fetchTable]);
+
+    // Initial fetch: run once when user and userRole are ready
     useEffect(() => {
-        if (userRole === 'super_admin') {
-            fetchAllData();
+        if (user && userRole && !initialFetchedRef.current) {
+            initialFetchedRef.current = true;
+            fetchAllData({ force: false });
         }
-    }, [superAdminFilterMine, userRole]); 
-
-    useEffect(() => {
-        if(user) fetchAllData();
-    }, [fetchAllData, user]);
+    }, [user, userRole, fetchAllData]);
 
     const updateRecord = (tableName, updatedRecord) => {
         const setterMap = {
@@ -247,6 +298,7 @@ export const DataProvider = ({ children }) => {
         documents,
         loading,
         fetchAllData,
+        fetchTable,
         updateRecord,
         updateRecordLocally,
         addRecord,

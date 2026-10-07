@@ -20,7 +20,7 @@ import TablesDiagnosticPanel from '@/components/debug/TablesDiagnosticPanel';
 
 const SuperAdminPanel = () => {
   const { toast } = useToast();
-  const { agents, fetchAllData } = useData();
+  const { agents, fetchAllData, fetchTable } = useData();
   const { userRole } = useAuth();
   const [users, setUsers] = useState([]);
   const navigate = useNavigate();
@@ -51,10 +51,10 @@ const SuperAdminPanel = () => {
 
     if (error) {
       toast({ title: "Errore", description: "Impossibile aggiornare il ruolo.", variant: "destructive" });
-      fetchAllData(); 
+      await fetchTable('agents', true); 
     } else {
       toast({ title: "Successo", description: "Ruolo utente aggiornato.", className: "bg-green-500 text-white" });
-      fetchAllData(); 
+      await fetchTable('agents', true); 
     }
   };
 
