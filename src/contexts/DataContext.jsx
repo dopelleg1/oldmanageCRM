@@ -49,42 +49,58 @@ export const DataProvider = ({ children }) => {
     }, []);
 
     const fetchData = useCallback(async (tableName, setter, recordType) => {
-        let query;
-        if (tableName === 'potential_activities') {
-            query = supabase.from(tableName).select('id, type, nome, cognome, telefono, email, indirizzo, lat, lng, citta, zona, regione, agente_id, note, data_richiamo, created_at, budget, locali, mq, bagni, aggi, ricavo, categoria, caratteristiche, stato_presa_in_carico, numero, stato, anagrafica_type, allegati_urls, phone_2, fonte_chiamata');
-        } else {
-            query = supabase.from(tableName).select('*');
-        }
-        
-        const tablesWithAgentId = ['properties', 'commercial_activities', 'potential_tobacconists', 'potential_activities', 'appointments', 'telemarketing_contacts'];
-        
-        if (tablesWithAgentId.includes(tableName)) {
-            if (userRole === 'super_admin' && superAdminFilterMine) {
-                query = query.eq('agente_id', user.id);
+        const buildQuery = (includeFonte = true) => {
+            let q;
+            if (tableName === 'potential_activities') {
+                const cols = includeFonte
+                    ? 'id, type, nome, cognome, telefono, email, indirizzo, lat, lng, citta, zona, regione, agente_id, note, data_richiamo, created_at, budget, locali, mq, bagni, aggi, ricavo, categoria, caratteristiche, stato_presa_in_carico, numero, stato, anagrafica_type, allegati_urls, phone_2, fonte_chiamata'
+                    : 'id, type, nome, cognome, telefono, email, indirizzo, lat, lng, citta, zona, regione, agente_id, note, data_richiamo, created_at, budget, locali, mq, bagni, aggi, ricavo, categoria, caratteristiche, stato_presa_in_carico, numero, stato, anagrafica_type, allegati_urls, phone_2';
+                q = supabase.from(tableName).select(cols);
+            } else {
+                q = supabase.from(tableName).select('*');
             }
-        }
-        
-        if (tableName === 'potential_activities') {
-            query = query.order('created_at', { ascending: false });
-        } else if (['commercial_activities', 'properties'].includes(tableName)) {
-            query = query.order('numero', { ascending: false }); 
-        } else if (tableName === 'potential_tobacconists') {
-            query = query.order('created_at', { ascending: false });
-        } else if (tableName === 'telemarketing_contacts') {
-            query = query.order('created_at', { ascending: false });
-        } else if (tableName === 'documents') {
-            query = query.order('created_at', { ascending: false });
-        }
+            
+            const tablesWithAgentId = ['properties', 'commercial_activities', 'potential_tobacconists', 'potential_activities', 'appointments', 'telemarketing_contacts'];
+            
+            if (tablesWithAgentId.includes(tableName)) {
+                if (userRole === 'super_admin' && superAdminFilterMine) {
+                    q = q.eq('agente_id', user.id);
+                }
+            }
+            
+            if (tableName === 'potential_activities') {
+                q = q.order('created_at', { ascending: false });
+            } else if (['commercial_activities', 'properties'].includes(tableName)) {
+                q = q.order('numero', { ascending: false }); 
+            } else if (tableName === 'potential_tobacconists') {
+                q = q.order('created_at', { ascending: false });
+            } else if (tableName === 'telemarketing_contacts') {
+                q = q.order('created_at', { ascending: false });
+            } else if (tableName === 'documents') {
+                q = q.order('created_at', { ascending: false });
+            }
+            return q;
+        };
 
         let allData = [];
         let page = 0;
         const pageSize = 1000;
         let hasMore = true;
+        let query = buildQuery(true);
 
         try {
             while (hasMore) {
                 const { data, error } = await query.range(page * pageSize, (page + 1) * pageSize - 1);
-                if (error) throw error;
+                if (error) {
+                    if (tableName === 'potential_activities' && error.message && error.message.includes('fonte_chiamata')) {
+                        console.warn("Colonna fonte_chiamata non ancora creata nel database. Caricamento senza fonte_chiamata.");
+                        query = buildQuery(false);
+                        page = 0;
+                        allData = [];
+                        continue;
+                    }
+                    throw error;
+                }
                 if (data && data.length > 0) {
                     allData = [...allData, ...data];
                     if (data.length < pageSize) {
