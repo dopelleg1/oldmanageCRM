@@ -35,7 +35,7 @@ export const searchConfig = {
   potential_activities: {
     tableName: 'potential_activities',
     displayName: 'Potenziali Attività',
-    searchableFields: ['nome', 'cognome', 'email', 'telefono', 'phone_2', 'numero', 'note', 'citta', 'zona'],
+    searchableFields: ['nome', 'cognome', 'email', 'telefono', 'phone_2', 'numero', 'note', 'citta', 'zona', 'fonte_chiamata'],
     rolePermissions: {
       agente: 'own',
       telemarketing: 'own',

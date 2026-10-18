@@ -185,6 +185,7 @@ const ConfigurationPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <ConfigSection title="Categorie Attività" configType="categoria_attivita" />
           <ConfigSection title="Stati Attività (anche per Potenziali)" configType="stato_attivita" />
+          <ConfigSection title="Fonti Chiamata (Potenziali)" configType="fonte_chiamata" />
           <ConfigSection title="Categorie Immobili" configType="categoria_immobile" />
           <ConfigSection title="Tipologie Immobili" configType="tipologia_immobile" />
           <ConfigSection title="Stati Immobili" configType="stato_immobile" />

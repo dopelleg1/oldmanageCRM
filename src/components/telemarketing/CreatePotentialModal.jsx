@@ -150,6 +150,7 @@ const CreatePotentialModal = ({ isOpen, onClose, contact }) => {
             data_richiamo: dataRichiamo || null,
             categoria,
             note,
+            fonte_chiamata: contact ? 'Telemarketing' : undefined,
         };
 
         if (potentialType === 'potential_activities' && !formData.type) {

@@ -301,6 +301,19 @@ const PotentialActivitiesPage = () => {
         { accessorKey: 'zona', header: 'Zona' },
         { accessorKey: 'citta', header: 'Città' },
         { 
+            accessorKey: 'fonte_chiamata', 
+            header: 'Fonte',
+            cell: ({ row }) => {
+                const val = row.getValue("fonte_chiamata");
+                if (!val) return <span className="text-gray-400 text-xs">-</span>;
+                return (
+                    <Badge variant="outline" className="bg-purple-50 text-purple-700 border-purple-200 text-xs font-medium">
+                        {val}
+                    </Badge>
+                );
+            }
+        },
+        { 
             accessorKey: 'allegati_urls', 
             header: 'Allegati',
             cell: ({ row }) => {
@@ -333,7 +346,8 @@ const PotentialActivitiesPage = () => {
         { name: 'cognome', label: 'Cognome' },
         { name: 'citta', label: 'Città' },
         { name: 'indirizzo', label: 'Indirizzo' },
-        { name: 'note', label: 'Note' }
+        { name: 'note', label: 'Note' },
+        { name: 'fonte_chiamata', label: 'Fonte' }
     ];
 
     if (isActuallyLoading) {

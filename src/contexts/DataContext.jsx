@@ -51,7 +51,7 @@ export const DataProvider = ({ children }) => {
     const fetchData = useCallback(async (tableName, setter, recordType) => {
         let query;
         if (tableName === 'potential_activities') {
-            query = supabase.from(tableName).select('id, type, nome, cognome, telefono, email, indirizzo, lat, lng, citta, zona, regione, agente_id, note, data_richiamo, created_at, budget, locali, mq, bagni, aggi, ricavo, categoria, caratteristiche, stato_presa_in_carico, numero, stato, anagrafica_type, allegati_urls');
+            query = supabase.from(tableName).select('id, type, nome, cognome, telefono, email, indirizzo, lat, lng, citta, zona, regione, agente_id, note, data_richiamo, created_at, budget, locali, mq, bagni, aggi, ricavo, categoria, caratteristiche, stato_presa_in_carico, numero, stato, anagrafica_type, allegati_urls, phone_2, fonte_chiamata');
         } else {
             query = supabase.from(tableName).select('*');
         }

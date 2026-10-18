@@ -540,6 +540,9 @@ const RecordDetailModal = forwardRef(({ record, isOpen, onClose, startInEditMode
             <EditableDetailItem label="Stato" value={editedRecord.stato} isEditing={isEditing}>
                  <ConfigurableSelect fieldName="stato_attivita" value={editedRecord.stato} onChange={(value) => handleInputChange('stato', value)} />
             </EditableDetailItem>
+            <EditableDetailItem label="Fonte Chiamata" value={editedRecord.fonte_chiamata} isEditing={isEditing}>
+                 <ConfigurableSelect fieldName="fonte_chiamata" value={editedRecord.fonte_chiamata} onChange={(value) => handleInputChange('fonte_chiamata', value)} placeholder="Seleziona o digita fonte..." />
+            </EditableDetailItem>
             <AddressField isEditing={isEditing} record={editedRecord} onAddressSelect={handleAddressSelect} />
             <EditableDetailItem label="Città" value={editedRecord.citta} isEditing={isEditing} onChange={(e) => handleInputChange('citta', e.target.value)} />
             <EditableDetailItem 
