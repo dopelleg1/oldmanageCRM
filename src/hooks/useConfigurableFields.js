@@ -2,6 +2,19 @@ import { useCallback } from 'react';
 import { supabase } from '@/lib/customSupabaseClient';
 import { useData } from '@/contexts/DataContext';
 
+const DEFAULT_OPTIONS = {
+  fonte_chiamata: [
+    'Immobiliare.it',
+    'Casa.it',
+    'Sito web',
+    'Google',
+    'Subito.it',
+    'Passaparola',
+    'Cartello / Vetrofania',
+    'Telemarketing'
+  ]
+};
+
 export const useConfigurableFields = () => {
   const dataContext = useData();
   const configurations = dataContext?.configurations || [];
@@ -9,10 +22,15 @@ export const useConfigurableFields = () => {
   const loading = dataContext?.loading || false;
 
   const getFieldOptions = useCallback((fieldName) => {
-    return configurations
+    const dbOptions = configurations
       .filter(item => item.type === fieldName)
-      .map(item => item.value)
-      .sort((a, b) => a.localeCompare(b));
+      .map(item => item.value);
+
+    // If DB has custom options, merge with defaults without duplicates
+    const defaults = DEFAULT_OPTIONS[fieldName] || [];
+    const all = Array.from(new Set([...defaults, ...dbOptions]));
+
+    return all.sort((a, b) => a.localeCompare(b));
   }, [configurations]);
 
   const fieldExists = useCallback((fieldName, value) => {
