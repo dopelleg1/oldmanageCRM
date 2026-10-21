@@ -162,6 +162,7 @@ export const useUnifiedSearch = (baseData, tableName) => {
     potentialTobacconists,
     potentialActivities,
     telemarketing,
+    appointments,
     agents
   } = useData();
 
@@ -179,10 +180,10 @@ export const useUnifiedSearch = (baseData, tableName) => {
   const searchDataset = useCallback((dataset, targetTableName, displayName) => {
     if (!dataset) return [];
 
-    // Filter by ownership if user is agent and showAllRecords is false
+    // Filter by ownership if user is agent and showAllRecords is false AND not actively searching
     let visibleData = dataset;
     const isAgent = ['agente', 'telemarketing'].includes(userRole);
-    if (isAgent && !showAllRecords && !searchInAllTables) {
+    if (isAgent && !showAllRecords && !searchInAllTables && !searchTerm.trim()) {
       visibleData = dataset.filter(item => item.agente_id === user?.id);
     }
 
@@ -226,7 +227,8 @@ export const useUnifiedSearch = (baseData, tableName) => {
         ...searchDataset(properties, 'properties', 'Immobile'),
         ...searchDataset(potentialTobacconists, 'potential_tobacconists', 'Potenziale Tabaccheria'),
         ...searchDataset(potentialActivities, 'potential_activities', 'Potenziale Acquirente/Venditore'),
-        ...searchDataset(telemarketing, 'telemarketing_contacts', 'Telemarketing')
+        ...searchDataset(telemarketing, 'telemarketing_contacts', 'Telemarketing'),
+        ...searchDataset(appointments, 'appointments', 'Appuntamento')
       ];
 
       // Sort by creation date
@@ -236,8 +238,9 @@ export const useUnifiedSearch = (baseData, tableName) => {
     // 2. Local Search Mode
     let localFiltered = baseData || [];
 
-    // Apply agent ownership filter if showAllRecords is false
-    if (isAgent && !showAllRecords) {
+    // Apply agent ownership filter if showAllRecords is false AND user is not actively searching.
+    // When a user searches for a name or phone, they need to see if it exists in the CRM!
+    if (isAgent && !showAllRecords && !searchTerm.trim()) {
       localFiltered = localFiltered.filter(item => item.agente_id === user?.id);
     }
 
@@ -260,6 +263,7 @@ export const useUnifiedSearch = (baseData, tableName) => {
     potentialTobacconists,
     potentialActivities,
     telemarketing,
+    appointments,
     agentMap
   ]);
 
@@ -288,6 +292,9 @@ function getRecordIdentifier(record, tableName) {
   if (tableName === 'potential_activities') {
     return record.numero ? `N. ${record.numero}` : 'Acq/Vend';
   }
+  if (tableName === 'appointments') {
+    return 'Appuntamento';
+  }
   return 'Contatto';
 }
 
@@ -311,11 +318,19 @@ function getRecordTitle(record, tableName) {
     if (record.nome_azienda && contactName) return `${record.nome_azienda} (${contactName})`;
     return record.nome_azienda || contactName || 'Contatto Telemarketing';
   }
+  if (tableName === 'appointments') {
+    return record.title || 'Appuntamento';
+  }
   return record.title || 'Dettaglio';
 }
 
 // Helper to resolve details/subtitle
 function getRecordSubtitle(record, tableName) {
+  if (tableName === 'appointments') {
+    const timeStr = record.start_time ? new Date(record.start_time).toLocaleString('it-IT') : '';
+    return [timeStr, record.luogo, record.note].filter(Boolean).join(' | ');
+  }
+
   const phones = [record.telefono_proprietario || record.telefono, record.phone_2].filter(Boolean).join(' / ');
   const geo = [record.indirizzo, record.citta, record.zona].filter(Boolean).join(', ');
   

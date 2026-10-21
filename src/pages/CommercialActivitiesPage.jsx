@@ -71,6 +71,11 @@ const CommercialActivitiesPage = () => {
     filteredCount
   } = useUnifiedSearch(processedActivities, 'commercial_activities');
 
+  // Reset pagination to first page whenever search criteria change
+  useEffect(() => {
+    setPagination(prev => ({ ...prev, pageIndex: 0 }));
+  }, [searchTerm, showAllRecords, searchInAllTables]);
+
   // Restore search state on mount
   useEffect(() => {
     const saved = loadState();

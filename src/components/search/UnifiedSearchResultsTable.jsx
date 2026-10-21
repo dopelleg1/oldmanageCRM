@@ -17,6 +17,8 @@ const UnifiedSearchResultsTable = ({ results, onRowClick }) => {
         else if (typeName === 'Attività Commerciale') badgeVariant = 'outline';
         else if (typeName === 'Potenziale Tabaccheria') badgeVariant = 'secondary';
         else if (typeName === 'Potenziale Acquirente/Venditore') badgeVariant = 'destructive';
+        else if (typeName === 'Appuntamento') badgeVariant = 'secondary';
+        else if (typeName === 'Telemarketing') badgeVariant = 'outline';
         
         return (
           <Badge variant={badgeVariant} className="whitespace-nowrap font-semibold">

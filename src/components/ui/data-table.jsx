@@ -39,9 +39,14 @@ export function DataTable({
   const [internalPagination, setInternalPagination] = useState({ pageIndex: 0, pageSize: 10 })
   
   const activePagination = pagination || (pageIndex !== undefined ? { pageIndex, pageSize: 10 } : internalPagination);
+  
+  // Safety check: clamp pageIndex if data changed (e.g. after search filtering)
+  const maxPageIndex = data?.length > 0 ? Math.ceil(data.length / activePagination.pageSize) - 1 : 0;
+  const safePageIndex = Math.min(Math.max(0, activePagination.pageIndex), Math.max(0, maxPageIndex));
+  const safePagination = { ...activePagination, pageIndex: safePageIndex };
 
   const handlePaginationChange = (updater) => {
-      const newPagination = typeof updater === 'function' ? updater(activePagination) : updater;
+      const newPagination = typeof updater === 'function' ? updater(safePagination) : updater;
       
       if (onPaginationChange) {
           onPaginationChange(newPagination);
@@ -59,7 +64,7 @@ export function DataTable({
     columns,
     state: {
       globalFilter,
-      pagination: activePagination,
+      pagination: safePagination,
       ...(sorting !== undefined && { sorting }),
       ...(columnFilters !== undefined && { columnFilters }),
       ...(expanded !== undefined && { expanded }),
