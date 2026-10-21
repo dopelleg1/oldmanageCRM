@@ -54,11 +54,6 @@ const PotentialTobacconistsPage = () => {
         filteredCount 
     } = useUnifiedSearch(potentialTobacconists, 'potential_tobacconists');
 
-    // Reset pagination to first page whenever search or filter criteria change
-    useEffect(() => {
-        setPageIndex(0);
-    }, [searchTerm, showAllRecords, searchInAllTables]);
-
     // Restore search & page state on mount
     useEffect(() => {
         const savedPage = loadPageState();
@@ -130,8 +125,8 @@ const PotentialTobacconistsPage = () => {
     
     const handleRemapClose = async () => { setIsRemapModalOpen(false); await fetchTable('potential_tobacconists', true); };
 
-    const displayData = filteredData;
-    const isActuallyLoading = loading;
+    const displayData = (loading && cachedResults) ? cachedResults : filteredData;
+    const isActuallyLoading = loading && !cachedResults;
 
     const handleExport = async () => {
         try {

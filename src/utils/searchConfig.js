@@ -73,17 +73,6 @@ export const searchConfig = {
       admin: 'all',
       super_admin: 'all'
     }
-  },
-  appointments: {
-    tableName: 'appointments',
-    displayName: 'Appuntamenti',
-    searchableFields: ['title', 'luogo', 'note', 'related_table', 'agent_name'],
-    rolePermissions: {
-      agente: 'own',
-      telemarketing: 'all',
-      admin: 'all',
-      super_admin: 'all'
-    }
   }
 };
 

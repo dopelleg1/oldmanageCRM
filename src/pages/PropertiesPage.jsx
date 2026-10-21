@@ -40,11 +40,6 @@ const PropertiesPage = () => {
     } = useUnifiedSearch(properties, 'properties');
 
     const [pageIndex, setPageIndex] = useState(0);
-
-    // Reset pagination to first page whenever search criteria change
-    useEffect(() => {
-        setPageIndex(0);
-    }, [searchTerm, showAllRecords, searchInAllTables]);
     const [selectedRecord, setSelectedRecord] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
