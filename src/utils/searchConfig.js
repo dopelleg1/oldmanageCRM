@@ -2,7 +2,11 @@ export const searchConfig = {
   commercial_activities: {
     tableName: 'commercial_activities',
     displayName: 'Attività Commerciali',
-    searchableFields: ['codice', 'numero', 'categoria', 'citta', 'indirizzo', 'stato', 'full_code', 'telefono_proprietario', 'phone_2'],
+    searchableFields: [
+      'codice', 'numero', 'categoria', 'citta', 'indirizzo', 'zona', 'regione', 'stato', 
+      'full_code', 'nome_proprietario', 'cognome_proprietario', 'telefono_proprietario', 
+      'phone_2', 'email_proprietario', 'note', 'agent_name'
+    ],
     rolePermissions: {
       agente: 'own', // Can only search own data
       telemarketing: 'own',
@@ -13,7 +17,11 @@ export const searchConfig = {
   properties: {
     tableName: 'properties',
     displayName: 'Immobili',
-    searchableFields: ['codice', 'numero', 'citta', 'indirizzo', 'zona', 'stato', 'full_code', 'nome_proprietario', 'cognome_proprietario', 'telefono_proprietario', 'phone_2'],
+    searchableFields: [
+      'codice', 'numero', 'categoria', 'tipologia', 'citta', 'indirizzo', 'zona', 'regione', 'stato', 
+      'full_code', 'nome_proprietario', 'cognome_proprietario', 'telefono_proprietario', 
+      'phone_2', 'email_proprietario', 'note', 'agent_name'
+    ],
     rolePermissions: {
       agente: 'own',
       telemarketing: 'own',
@@ -24,7 +32,11 @@ export const searchConfig = {
   potential_tobacconists: {
     tableName: 'potential_tobacconists',
     displayName: 'Potenziali Tabaccherie',
-    searchableFields: ['numero_rivendita', 'nome', 'cognome', 'citta', 'zona', 'indirizzo', 'telefono', 'phone_2'],
+    searchableFields: [
+      'numero_rivendita', 'numero_ricevitoria', 'tipo_rivendita', 'distributore',
+      'nome', 'cognome', 'citta', 'zona', 'regione', 'indirizzo', 'telefono', 'phone_2', 
+      'email', 'note', 'stato', 'categoria', 'caratteristiche', 'agent_name'
+    ],
     rolePermissions: {
       agente: 'own',
       telemarketing: 'own',
@@ -35,7 +47,11 @@ export const searchConfig = {
   potential_activities: {
     tableName: 'potential_activities',
     displayName: 'Potenziali Attività',
-    searchableFields: ['nome', 'cognome', 'email', 'telefono', 'phone_2', 'numero', 'note', 'citta', 'zona', 'fonte_chiamata'],
+    searchableFields: [
+      'numero', 'type', 'nome', 'cognome', 'email', 'telefono', 'phone_2', 
+      'citta', 'zona', 'regione', 'indirizzo', 'note', 'fonte_chiamata', 
+      'anagrafica_type', 'categoria', 'caratteristiche', 'stato', 'agent_name'
+    ],
     rolePermissions: {
       agente: 'own',
       telemarketing: 'own',
@@ -46,7 +62,11 @@ export const searchConfig = {
   telemarketing_contacts: {
     tableName: 'telemarketing_contacts',
     displayName: 'Telemarketing',
-    searchableFields: ['nome_azienda', 'nome', 'cognome', 'telefono', 'phone_2', 'email', 'citta', 'indirizzo'],
+    searchableFields: [
+      'nome_azienda', 'nome', 'cognome', 'telefono', 'phone_2', 'email', 
+      'citta', 'indirizzo', 'regione', 'note', 'categoria', 'tipologia', 
+      'stato', 'anagrafica_type', 'agent_name'
+    ],
     rolePermissions: {
       agente: 'none', // Agents typically don't see raw telemarketing data unless assigned (handled by data context)
       telemarketing: 'all', // Telemarketing role sees all

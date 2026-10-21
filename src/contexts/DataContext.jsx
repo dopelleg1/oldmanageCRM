@@ -193,7 +193,7 @@ export const DataProvider = ({ children }) => {
                     tablesToFetch.push('properties', 'commercial_activities', 'potential_tobacconists', 'potential_activities', 'appointments');
                 }
                 
-                if (['admin', 'telemarketing', 'super_admin'].includes(userRole)) {
+                if (['admin', 'agente', 'telemarketing', 'super_admin'].includes(userRole)) {
                     tablesToFetch.push('telemarketing_contacts');
                 }
 
