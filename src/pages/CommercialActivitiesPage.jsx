@@ -98,12 +98,14 @@ const CommercialActivitiesPage = () => {
       }
       if (location.state.selectedRecord) {
         setSelectedActivity(location.state.selectedRecord);
-        setIsDetailModalOpen(true);
+        setIsAdding(false);
+          setIsModalOpen(true);
       } else if (location.state.selectedRecordId && activities?.length > 0) {
         const found = activities.find(r => r.id === location.state.selectedRecordId);
         if (found) {
           setSelectedActivity(found);
-          setIsDetailModalOpen(true);
+          setIsAdding(false);
+        setIsModalOpen(true);
         }
       }
     }
