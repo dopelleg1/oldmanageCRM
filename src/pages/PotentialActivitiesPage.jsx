@@ -21,7 +21,6 @@ import { exportTableToCSV } from '@/utils/csvExportService';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import SearchBar from '@/components/search/SearchBar';
 import { useUnifiedSearch } from '@/hooks/useUnifiedSearch';
-import UnifiedSearchResultsTable from '@/components/search/UnifiedSearchResultsTable';
 import { useSearchStateManager } from '@/hooks/useSearchStateManager';
 import { usePageStateManager } from '@/hooks/usePageStateManager';
 import { RingLoader } from 'react-spinners';
@@ -57,10 +56,7 @@ const PotentialActivitiesPage = () => {
         setSearchTerm,
         showAllRecords,
         setShowAllRecords,
-        searchInAllTables,
-        setSearchInAllTables,
         filteredData,
-        isGlobalSearchActive,
         totalCount,
         filteredCount
     } = useUnifiedSearch(potentialActivities, 'potential_activities', { activeTab: currentTab, tabField: 'type' });
@@ -68,7 +64,7 @@ const PotentialActivitiesPage = () => {
     // Reset pagination to first page whenever search term or filters change
     useEffect(() => {
         setPageIndex(0);
-    }, [searchTerm, currentTab, showAllRecords, searchInAllTables]);
+    }, [searchTerm, currentTab, showAllRecords]);
 
     // Restore state on mount
     useEffect(() => {
@@ -111,20 +107,20 @@ const PotentialActivitiesPage = () => {
             savePageState({
                 currentPage: pageIndex,
                 searchTerm: searchTerm || "",
-                filters: { currentTab, showAllRecords, searchInAllTables },
+                filters: { currentTab, showAllRecords },
                 sortBy: [],
                 expandedRows: {}
             });
         }
-    }, [pageIndex, currentTab, searchTerm, showAllRecords, searchInAllTables, isRestored, savePageState]);
+    }, [pageIndex, currentTab, searchTerm, showAllRecords, isRestored, savePageState]);
 
     // Save search state when filters or data change
     useEffect(() => {
         if (!loading && isRestored) {
-            saveSearchState(filteredData, { currentTab, showAllRecords, searchInAllTables }, 1, searchTerm);
+            saveSearchState(filteredData, { currentTab, showAllRecords }, 1, searchTerm);
             setCachedResults(filteredData);
         }
-    }, [currentTab, showAllRecords, searchInAllTables, filteredData, loading, isRestored, saveSearchState, searchTerm]);
+    }, [currentTab, showAllRecords, filteredData, loading, isRestored, saveSearchState, searchTerm]);
 
     const handleClearFilters = () => {
         clearSearchState();
@@ -409,8 +405,8 @@ const PotentialActivitiesPage = () => {
                                 </Button>
                             </div>
                         </div>
-                        <div className="flex flex-wrap gap-4 items-center px-1 text-xs text-muted-foreground mt-1">
-                          {['agente', 'telemarketing'].includes(userRole) && (
+                        {['agente', 'telemarketing'].includes(userRole) && (
+                          <div className="flex flex-wrap gap-4 items-center px-1 text-xs text-muted-foreground mt-1">
                             <label className="flex items-center gap-2 cursor-pointer select-none">
                               <input 
                                 type="checkbox" 
@@ -420,17 +416,8 @@ const PotentialActivitiesPage = () => {
                               />
                               Mostra record di altri agenti (sola lettura)
                             </label>
-                          )}
-                          <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <input 
-                              type="checkbox" 
-                              checked={searchInAllTables} 
-                              onChange={(e) => setSearchInAllTables(e.target.checked)}
-                              className="rounded border-gray-300 text-primary focus:ring-primary h-3.5 w-3.5"
-                            />
-                            Cerca in tutte le tabelle
-                          </label>
-                        </div>
+                          </div>
+                        )}
                     </div>
                 </div>
                 
@@ -488,22 +475,13 @@ const PotentialActivitiesPage = () => {
                                 <RingLoader color={"#2563eb"} size={12} /> Aggiornamento in corso...
                             </div>
                         )}
-                        {isGlobalSearchActive ? (
-                            <UnifiedSearchResultsTable 
-                                results={displayData}
-                                onRowClick={(originalRecord) => {
-                                    setSelectedRecord(originalRecord);
-                                    setIsDetailModalOpen(true);
-                                }}
-                            />
-                        ) : (
+                        
                             <DataTable 
                                 columns={columns} 
                                 data={displayData} 
                                 pageIndex={pageIndex}
                                 onPageIndexChange={setPageIndex}
                             />
-                        )}
                     </div>
                 </div>
             </div>

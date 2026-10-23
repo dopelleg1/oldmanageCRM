@@ -21,7 +21,6 @@ import { exportTableToCSV } from '@/utils/csvExportService';
 import { useSessionStorage } from '@/hooks/useSessionStorage';
 import SearchBar from '@/components/search/SearchBar';
 import { useUnifiedSearch } from '@/hooks/useUnifiedSearch';
-import UnifiedSearchResultsTable from '@/components/search/UnifiedSearchResultsTable';
 import { usePageStateManager } from '@/hooks/usePageStateManager';
 
 const CommercialActivitiesPage = () => {
@@ -65,10 +64,7 @@ const CommercialActivitiesPage = () => {
     setSearchTerm,
     showAllRecords,
     setShowAllRecords,
-    searchInAllTables,
-    setSearchInAllTables,
     filteredData,
-    isGlobalSearchActive,
     totalCount,
     filteredCount
   } = useUnifiedSearch(processedActivities, 'commercial_activities');
@@ -76,7 +72,7 @@ const CommercialActivitiesPage = () => {
   // Reset pagination to first page whenever search criteria change
   useEffect(() => {
     setPagination(prev => ({ ...prev, pageIndex: 0 }));
-  }, [searchTerm, showAllRecords, searchInAllTables]);
+  }, [searchTerm, showAllRecords]);
 
   // Restore search state on mount
   useEffect(() => {
@@ -119,14 +115,13 @@ const CommercialActivitiesPage = () => {
         saveState({
             searchTerm,
             showAllRecords,
-            searchInAllTables,
-            pagination,
+                        pagination,
             sorting,
             columnFilters,
             expandedRows
         });
     }
-  }, [searchTerm, showAllRecords, searchInAllTables, pagination, sorting, columnFilters, expandedRows, isRestored, saveState]);
+  }, [searchTerm, showAllRecords, pagination, sorting, columnFilters, expandedRows, isRestored, saveState]);
 
   const handleClearFilters = () => {
     clearState();
@@ -331,8 +326,8 @@ const CommercialActivitiesPage = () => {
                   {canPerformActions && <Button onClick={handleCreateNew}><PlusCircle className="mr-2 h-4 w-4" /> Nuova</Button>}
               </div>
             </div>
-            <div className="flex flex-wrap gap-4 items-center px-1 text-xs text-muted-foreground mt-1">
-              {['agente', 'telemarketing'].includes(userRole) && (
+            {['agente', 'telemarketing'].includes(userRole) && (
+              <div className="flex flex-wrap gap-4 items-center px-1 text-xs text-muted-foreground mt-1">
                 <label className="flex items-center gap-2 cursor-pointer select-none">
                   <input 
                     type="checkbox" 
@@ -342,17 +337,8 @@ const CommercialActivitiesPage = () => {
                   />
                   Mostra record di altri agenti (sola lettura)
                 </label>
-              )}
-              <label className="flex items-center gap-2 cursor-pointer select-none">
-                <input 
-                  type="checkbox" 
-                  checked={searchInAllTables} 
-                  onChange={(e) => setSearchInAllTables(e.target.checked)}
-                  className="rounded border-gray-300 text-primary focus:ring-primary h-3.5 w-3.5"
-                />
-                Cerca in tutte le tabelle
-              </label>
-            </div>
+              </div>
+            )}
           </div>
         </div>
         
@@ -370,16 +356,7 @@ const CommercialActivitiesPage = () => {
                <RingLoader color={"#2563eb"} size={12} /> Aggiornamento in corso...
             </div>
           )}
-          {isGlobalSearchActive ? (
-            <UnifiedSearchResultsTable 
-              results={filteredData}
-              onRowClick={(originalRecord) => {
-                setSelectedActivity(originalRecord);
-                setIsAdding(false);
-                setIsModalOpen(true);
-              }}
-            />
-          ) : (
+          
             <DataTable 
               columns={columns} 
               data={filteredData || []} 
@@ -393,7 +370,6 @@ const CommercialActivitiesPage = () => {
               expanded={expandedRows}
               onExpandedChange={setExpandedRows}
             />
-          )}
         </div>
       </motion.div>
 

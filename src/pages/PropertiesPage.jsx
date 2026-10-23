@@ -17,7 +17,6 @@ import { exportTableToCSV } from '@/utils/csvExportService';
 import { useSessionStorage } from '@/hooks/useSessionStorage';
 import SearchBar from '@/components/search/SearchBar';
 import { useUnifiedSearch } from '@/hooks/useUnifiedSearch';
-import UnifiedSearchResultsTable from '@/components/search/UnifiedSearchResultsTable';
 import { usePageStateManager } from '@/hooks/usePageStateManager';
 
 const PropertiesPage = () => {
@@ -33,7 +32,6 @@ const PropertiesPage = () => {
         setSearchTerm, 
         showAllRecords, 
         setShowAllRecords, 
-        searchInAllTables, 
         setSearchInAllTables, 
         filteredData, 
         isGlobalSearchActive, 
@@ -46,7 +44,7 @@ const PropertiesPage = () => {
     // Reset pagination to first page whenever search criteria change
     useEffect(() => {
         setPageIndex(0);
-    }, [searchTerm, showAllRecords, searchInAllTables]);
+    }, [searchTerm, showAllRecords]);
     const [selectedRecord, setSelectedRecord] = useState(null);
     const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -89,12 +87,11 @@ const PropertiesPage = () => {
             currentPage: pageIndex,
             searchTerm: searchTerm || "",
             showAllRecords,
-            searchInAllTables,
             filters: {},
             sortBy: [],
             expandedRows: {}
         });
-    }, [pageIndex, searchTerm, showAllRecords, searchInAllTables, saveState]);
+    }, [pageIndex, searchTerm, showAllRecords, saveState]);
 
     useEffect(() => {
         const draft = getFormData('properties', 'new');
@@ -261,8 +258,8 @@ const PropertiesPage = () => {
                                 </Button>
                             </div>
                         </div>
-                        <div className="flex flex-wrap gap-4 items-center px-1 text-xs text-muted-foreground mt-1">
-                          {['agente', 'telemarketing'].includes(userRole) && (
+                        {['agente', 'telemarketing'].includes(userRole) && (
+                          <div className="flex flex-wrap gap-4 items-center px-1 text-xs text-muted-foreground mt-1">
                             <label className="flex items-center gap-2 cursor-pointer select-none">
                               <input 
                                 type="checkbox" 
@@ -272,17 +269,8 @@ const PropertiesPage = () => {
                               />
                               Mostra record di altri agenti (sola lettura)
                             </label>
-                          )}
-                          <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <input 
-                              type="checkbox" 
-                              checked={searchInAllTables} 
-                              onChange={(e) => setSearchInAllTables(e.target.checked)}
-                              className="rounded border-gray-300 text-primary focus:ring-primary h-3.5 w-3.5"
-                            />
-                            Cerca in tutte le tabelle
-                          </label>
-                        </div>
+                          </div>
+                        )}
                     </div>
                 </div>
                 
@@ -295,15 +283,7 @@ const PropertiesPage = () => {
                     hideSearch={true} 
                 />
                 
-                {isGlobalSearchActive ? (
-                    <UnifiedSearchResultsTable 
-                        results={filteredData}
-                        onRowClick={(originalRecord) => {
-                            setSelectedRecord(originalRecord);
-                            setIsDetailModalOpen(true);
-                        }}
-                    />
-                ) : (
+                
                     <DataTable 
                         columns={columns} 
                         data={filteredData}
@@ -311,7 +291,6 @@ const PropertiesPage = () => {
                         pageIndex={pageIndex}
                         onPageIndexChange={setPageIndex}
                     />
-                )}
             </div>
             
             {selectedRecord && (

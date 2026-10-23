@@ -18,7 +18,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { useSessionStorage } from '@/hooks/useSessionStorage';
 import { usePageStateManager } from '@/hooks/usePageStateManager';
 import { useUnifiedSearch } from '@/hooks/useUnifiedSearch';
-import UnifiedSearchResultsTable from '@/components/search/UnifiedSearchResultsTable';
 
 const TelemarketingPage = () => {
     const { toast } = useToast();
@@ -48,10 +47,7 @@ const TelemarketingPage = () => {
         setSearchTerm,
         showAllRecords,
         setShowAllRecords,
-        searchInAllTables,
-        setSearchInAllTables,
         filteredData,
-        isGlobalSearchActive,
         totalCount,
         filteredCount
     } = useUnifiedSearch(telemarketing, 'telemarketing_contacts');
@@ -59,7 +55,7 @@ const TelemarketingPage = () => {
     // Reset pagination to first page whenever search criteria change
     useEffect(() => {
         setPagination(prev => ({ ...prev, pageIndex: 0 }));
-    }, [searchTerm, showAllRecords, searchInAllTables]);
+    }, [searchTerm, showAllRecords]);
 
     // Restore state on mount
     useEffect(() => {
@@ -99,9 +95,9 @@ const TelemarketingPage = () => {
     // Save state on change
     useEffect(() => {
         if (isRestored) {
-            saveState({ searchTerm, showAllRecords, searchInAllTables, pagination, sorting, columnFilters, expandedRows });
+            saveState({ searchTerm, showAllRecords, pagination, sorting, columnFilters, expandedRows });
         }
-    }, [searchTerm, showAllRecords, searchInAllTables, pagination, sorting, columnFilters, expandedRows, isRestored, saveState]);
+    }, [searchTerm, showAllRecords, pagination, sorting, columnFilters, expandedRows, isRestored, saveState]);
 
     const handleClearFilters = () => {
         clearState();
@@ -284,28 +280,19 @@ const TelemarketingPage = () => {
                                 />
 
                             </div>
-                            <div className="flex flex-wrap gap-4 items-center px-1 text-xs text-muted-foreground mt-1">
-                              {['agente', 'telemarketing'].includes(userRole) && (
-                                <label className="flex items-center gap-2 cursor-pointer select-none">
-                                  <input 
-                                    type="checkbox" 
-                                    checked={showAllRecords} 
-                                    onChange={(e) => setShowAllRecords(e.target.checked)}
-                                    className="rounded border-gray-300 text-primary focus:ring-primary h-3.5 w-3.5"
-                                  />
-                                  Mostra record di altri agenti (sola lettura)
-                                </label>
+                            {['agente', 'telemarketing'].includes(userRole) && (
+                                <div className="flex flex-wrap gap-4 items-center px-1 text-xs text-muted-foreground mt-1">
+                                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                                    <input 
+                                      type="checkbox" 
+                                      checked={showAllRecords} 
+                                      onChange={(e) => setShowAllRecords(e.target.checked)}
+                                      className="rounded border-gray-300 text-primary focus:ring-primary h-3.5 w-3.5"
+                                    />
+                                    Mostra record di altri agenti (sola lettura)
+                                  </label>
+                                </div>
                               )}
-                              <label className="flex items-center gap-2 cursor-pointer select-none">
-                                <input 
-                                  type="checkbox" 
-                                  checked={searchInAllTables} 
-                                  onChange={(e) => setSearchInAllTables(e.target.checked)}
-                                  className="rounded border-gray-300 text-primary focus:ring-primary h-3.5 w-3.5"
-                                />
-                                Cerca in tutte le tabelle
-                              </label>
-                            </div>
                         </div>
                         <div className="flex gap-2">
                             <Button variant="outline" size="sm" onClick={() => fetchTable('telemarketing_contacts', true)} title="Ricarica">
@@ -335,15 +322,7 @@ const TelemarketingPage = () => {
                          hideSearch={true} 
                      />
                      
-                     {isGlobalSearchActive ? (
-                        <UnifiedSearchResultsTable 
-                            results={filteredData}
-                            onRowClick={(originalRecord) => {
-                                setSelectedRecord(originalRecord);
-                                setIsDetailModalOpen(true);
-                            }}
-                        />
-                     ) : (
+                     
                         <DataTable 
                             columns={columns} 
                             data={filteredData || []} 
@@ -356,7 +335,6 @@ const TelemarketingPage = () => {
                             expanded={expandedRows}
                             onExpandedChange={setExpandedRows}
                         />
-                     )}
                 </div>
             </div>
             

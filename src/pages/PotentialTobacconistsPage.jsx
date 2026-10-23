@@ -17,7 +17,6 @@ import { exportTableToCSV } from '@/utils/csvExportService';
 import { useSessionStorage } from '@/hooks/useSessionStorage';
 import SearchBar from '@/components/search/SearchBar';
 import { useUnifiedSearch } from '@/hooks/useUnifiedSearch';
-import UnifiedSearchResultsTable from '@/components/search/UnifiedSearchResultsTable';
 import { useSearchStateManager } from '@/hooks/useSearchStateManager';
 import { usePageStateManager } from '@/hooks/usePageStateManager';
 import { RingLoader } from 'react-spinners';
@@ -48,7 +47,6 @@ const PotentialTobacconistsPage = () => {
         setSearchTerm, 
         showAllRecords, 
         setShowAllRecords, 
-        searchInAllTables, 
         setSearchInAllTables, 
         filteredData, 
         isGlobalSearchActive, 
@@ -59,7 +57,7 @@ const PotentialTobacconistsPage = () => {
     // Reset pagination to first page whenever search term or filters change
     useEffect(() => {
         setPageIndex(0);
-    }, [searchTerm, showAllRecords, searchInAllTables]);
+    }, [searchTerm, showAllRecords]);
 
     // Restore search & page state on mount
     useEffect(() => {
@@ -105,20 +103,20 @@ const PotentialTobacconistsPage = () => {
             savePageState({
                 currentPage: pageIndex,
                 searchTerm: searchTerm || "",
-                filters: { showAllRecords, searchInAllTables },
+                filters: { showAllRecords },
                 sortBy: [],
                 expandedRows: {}
             });
         }
-    }, [pageIndex, searchTerm, showAllRecords, searchInAllTables, isRestored, savePageState]);
+    }, [pageIndex, searchTerm, showAllRecords, isRestored, savePageState]);
 
     // Save search state when filters or data change
     useEffect(() => {
         if (!loading && isRestored) {
-            saveSearchState(filteredData, { showAllRecords, searchInAllTables }, 1, searchTerm);
+            saveSearchState(filteredData, { showAllRecords }, 1, searchTerm);
             setCachedResults(filteredData);
         }
-    }, [searchTerm, showAllRecords, searchInAllTables, filteredData, loading, isRestored, saveSearchState]);
+    }, [searchTerm, showAllRecords, filteredData, loading, isRestored, saveSearchState]);
 
     const handleClearFilters = () => {
         clearSearchState();
@@ -298,8 +296,8 @@ const PotentialTobacconistsPage = () => {
                                 </Button>
                             </div>
                         </div>
-                        <div className="flex flex-wrap gap-4 items-center px-1 text-xs text-muted-foreground mt-1">
-                          {['agente', 'telemarketing'].includes(userRole) && (
+                        {['agente', 'telemarketing'].includes(userRole) && (
+                          <div className="flex flex-wrap gap-4 items-center px-1 text-xs text-muted-foreground mt-1">
                             <label className="flex items-center gap-2 cursor-pointer select-none">
                               <input 
                                 type="checkbox" 
@@ -309,17 +307,8 @@ const PotentialTobacconistsPage = () => {
                               />
                               Mostra record di altri agenti (sola lettura)
                             </label>
-                          )}
-                          <label className="flex items-center gap-2 cursor-pointer select-none">
-                            <input 
-                              type="checkbox" 
-                              checked={searchInAllTables} 
-                              onChange={(e) => setSearchInAllTables(e.target.checked)}
-                              className="rounded border-gray-300 text-primary focus:ring-primary h-3.5 w-3.5"
-                            />
-                            Cerca in tutte le tabelle
-                          </label>
-                        </div>
+                          </div>
+                        )}
                     </div>
                 </div>
                 
@@ -338,15 +327,7 @@ const PotentialTobacconistsPage = () => {
                        <RingLoader color={"#2563eb"} size={12} /> Aggiornamento in corso...
                     </div>
                   )}
-                  {isGlobalSearchActive ? (
-                    <UnifiedSearchResultsTable 
-                        results={displayData}
-                        onRowClick={(originalRecord) => {
-                            setSelectedRecord(originalRecord);
-                            setIsDetailModalOpen(true);
-                        }}
-                    />
-                  ) : (
+                  
                     <DataTable 
                       columns={columns} 
                       data={displayData} 
@@ -354,7 +335,6 @@ const PotentialTobacconistsPage = () => {
                       pageIndex={pageIndex}
                       onPageIndexChange={setPageIndex}
                     />
-                  )}
                 </div>
             </div>
             {selectedRecord && (
