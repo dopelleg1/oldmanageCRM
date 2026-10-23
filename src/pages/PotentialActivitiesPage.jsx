@@ -49,14 +49,7 @@ const PotentialActivitiesPage = () => {
     
     const documentManagerRef = useRef();
 
-    // 1. Filter by Tab first
-    const tabFilteredData = useMemo(() => {
-        if (!potentialActivities) return [];
-        if (currentTab === 'all') return potentialActivities;
-        return potentialActivities.filter(item => (item.type || '').toLowerCase() === currentTab);
-    }, [potentialActivities, currentTab]);
-
-    // 2. Apply Unified Search
+    // Apply Unified Search with activeTab support
     const {
         searchTerm,
         setSearchTerm,
@@ -68,7 +61,12 @@ const PotentialActivitiesPage = () => {
         isGlobalSearchActive,
         totalCount,
         filteredCount
-    } = useUnifiedSearch(tabFilteredData, 'potential_activities');
+    } = useUnifiedSearch(potentialActivities, 'potential_activities', { activeTab: currentTab, tabField: 'type' });
+
+    // Reset pagination to first page whenever search term or filters change
+    useEffect(() => {
+        setPageIndex(0);
+    }, [searchTerm, currentTab, showAllRecords, searchInAllTables]);
 
     // Restore state on mount
     useEffect(() => {
@@ -135,8 +133,8 @@ const PotentialActivitiesPage = () => {
     
     const handleRemapClose = async () => { setIsRemapModalOpen(false); await fetchTable('potential_activities', true); };
 
-    const displayData = (loading && cachedResults) ? cachedResults : filteredData;
-    const isActuallyLoading = loading && !cachedResults;
+    const displayData = filteredData;
+    const isActuallyLoading = loading;
 
     const handleExport = async () => {
         try {

@@ -1,9 +1,23 @@
 import { useState, useMemo, useCallback } from 'react';
-import { useAuth } from '@/contexts/SupabaseAuthContext';
-import { useData } from '@/contexts/DataContext';
-import { getSearchableFields } from '@/utils/searchConfig';
+import { useAuth } from '../contexts/SupabaseAuthContext.jsx';
+import { useData } from '../contexts/DataContext.jsx';
+import {
+  normalizePhone,
+  matchRecord,
+  getRecordIdentifier,
+  getRecordTitle,
+  getRecordSubtitle
+} from '../utils/recordMatcher.js';
 
-export const useUnifiedSearch = (baseData, tableName) => {
+export {
+  normalizePhone,
+  matchRecord,
+  getRecordIdentifier,
+  getRecordTitle,
+  getRecordSubtitle
+};
+
+export const useUnifiedSearch = (baseData, tableName, options = {}) => {
   const { user, userRole } = useAuth();
   const {
     activities,
@@ -11,12 +25,15 @@ export const useUnifiedSearch = (baseData, tableName) => {
     potentialTobacconists,
     potentialActivities,
     telemarketing,
+    appointments,
     agents
   } = useData();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [showAllRecords, setShowAllRecords] = useState(false);
   const [searchInAllTables, setSearchInAllTables] = useState(false);
+
+  const { activeTab, tabField = 'type' } = options;
 
   // Map agents for quick name resolution
   const agentMap = useMemo(() => {
@@ -25,17 +42,17 @@ export const useUnifiedSearch = (baseData, tableName) => {
   }, [agents]);
 
   // Helper to search a single dataset and return standardized search results
-  const searchDataset = useCallback((dataset, targetTableName, displayName, fields) => {
+  const searchDataset = useCallback((dataset, targetTableName, displayName) => {
     if (!dataset) return [];
 
-    // Filter by ownership if user is agent and showAllRecords is false
     let visibleData = dataset;
     const isAgent = ['agente', 'telemarketing'].includes(userRole);
-    if (isAgent && !showAllRecords && !searchInAllTables) {
+    // When actively searching, allow matching records across agents so nothing is hidden
+    if (isAgent && !showAllRecords && !searchInAllTables && !searchTerm.trim()) {
       visibleData = dataset.filter(item => item.agente_id === user?.id);
     }
 
-    if (!searchTerm) {
+    if (!searchTerm || !searchTerm.trim()) {
       return visibleData.map(item => ({
         id: item.id,
         type: targetTableName,
@@ -49,33 +66,8 @@ export const useUnifiedSearch = (baseData, tableName) => {
       }));
     }
 
-    const lowerTerm = searchTerm.toLowerCase();
-
     return visibleData
-      .filter(item => {
-        const checkValue = (val, fieldName) => {
-          if (val === null || val === undefined) return false;
-          const strVal = String(val).toLowerCase();
-          
-          if (fieldName && (fieldName.includes('telefono') || fieldName.includes('phone'))) {
-            const cleanVal = strVal.replace(/\D/g, '');
-            const cleanTerm = lowerTerm.replace(/\D/g, '');
-            if (cleanTerm) {
-              return cleanVal.includes(cleanTerm);
-            }
-          }
-          return strVal.includes(lowerTerm);
-        };
-
-        return fields.some(field => {
-          if (field === 'full_code') {
-            const codeVal = `${item.codice || ''}-${item.numero || ''}`;
-            const codeValSpace = `${item.codice || ''} - ${item.numero || ''}`;
-            return checkValue(codeVal) || checkValue(codeValSpace);
-          }
-          return checkValue(item[field], field);
-        });
-      })
+      .filter(item => matchRecord(item, targetTableName, searchTerm, agentMap))
       .map(item => ({
         id: item.id,
         type: targetTableName,
@@ -96,11 +88,12 @@ export const useUnifiedSearch = (baseData, tableName) => {
     // 1. If global search is active and term is not empty
     if (searchInAllTables && searchTerm.trim() !== '') {
       const results = [
-        ...searchDataset(activities, 'commercial_activities', 'Attività Commerciale', getSearchableFields('commercial_activities')),
-        ...searchDataset(properties, 'properties', 'Immobile', getSearchableFields('properties')),
-        ...searchDataset(potentialTobacconists, 'potential_tobacconists', 'Potenziale Tabaccheria', getSearchableFields('potential_tobacconists')),
-        ...searchDataset(potentialActivities, 'potential_activities', 'Potenziale Acquirente/Venditore', getSearchableFields('potential_activities')),
-        ...searchDataset(telemarketing, 'telemarketing_contacts', 'Telemarketing', getSearchableFields('telemarketing_contacts'))
+        ...searchDataset(activities, 'commercial_activities', 'Attività Commerciale'),
+        ...searchDataset(properties, 'properties', 'Immobile'),
+        ...searchDataset(potentialTobacconists, 'potential_tobacconists', 'Potenziale Tabaccheria'),
+        ...searchDataset(potentialActivities, 'potential_activities', 'Potenziale Acquirente/Venditore'),
+        ...searchDataset(telemarketing, 'telemarketing_contacts', 'Telemarketing'),
+        ...searchDataset(appointments, 'appointments', 'Appuntamento')
       ];
 
       // Sort by creation date
@@ -110,48 +103,29 @@ export const useUnifiedSearch = (baseData, tableName) => {
     // 2. Local Search Mode
     let localFiltered = baseData || [];
 
-    // Apply agent ownership filter if showAllRecords is false
+    // If searching actively: search across all records in baseData (ignoring tab and agent filters so matches are found)
+    if (searchTerm && searchTerm.trim() !== '') {
+      return localFiltered.filter(item => matchRecord(item, tableName, searchTerm, agentMap));
+    }
+
+    // Normal browsing mode: apply tab filter and agent filter
+    if (activeTab && activeTab !== 'all') {
+      localFiltered = localFiltered.filter(item => (item[tabField] || '').toLowerCase() === activeTab.toLowerCase());
+    }
+
     if (isAgent && !showAllRecords) {
       localFiltered = localFiltered.filter(item => item.agente_id === user?.id);
     }
 
-    if (!searchTerm) {
-      return localFiltered;
-    }
-
-    const lowerTerm = searchTerm.toLowerCase();
-    const fields = getSearchableFields(tableName);
-
-    return localFiltered.filter(item => {
-      const checkValue = (val, fieldName) => {
-        if (val === null || val === undefined) return false;
-        const strVal = String(val).toLowerCase();
-        
-        if (fieldName && (fieldName.includes('telefono') || fieldName.includes('phone'))) {
-          const cleanVal = strVal.replace(/\D/g, '');
-          const cleanTerm = lowerTerm.replace(/\D/g, '');
-          if (cleanTerm) {
-            return cleanVal.includes(cleanTerm);
-          }
-        }
-        return strVal.includes(lowerTerm);
-      };
-
-      return fields.some(field => {
-        if (field === 'full_code') {
-          const codeVal = `${item.codice || ''}-${item.numero || ''}`;
-          const codeValSpace = `${item.codice || ''} - ${item.numero || ''}`;
-          return checkValue(codeVal) || checkValue(codeValSpace);
-        }
-        return checkValue(item[field], field);
-      });
-    });
+    return localFiltered;
   }, [
     baseData,
     tableName,
     searchTerm,
     showAllRecords,
     searchInAllTables,
+    activeTab,
+    tabField,
     userRole,
     user,
     searchDataset,
@@ -159,7 +133,9 @@ export const useUnifiedSearch = (baseData, tableName) => {
     properties,
     potentialTobacconists,
     potentialActivities,
-    telemarketing
+    telemarketing,
+    appointments,
+    agentMap
   ]);
 
   return {
@@ -175,48 +151,3 @@ export const useUnifiedSearch = (baseData, tableName) => {
     filteredCount: filteredData.length
   };
 };
-
-// Helper function to resolve the identifier based on the table name
-function getRecordIdentifier(record, tableName) {
-  if (tableName === 'commercial_activities' || tableName === 'properties') {
-    return record.codice ? `${record.codice}-${record.numero}` : `N. ${record.numero || ''}`;
-  }
-  if (tableName === 'potential_tobacconists') {
-    return record.numero_rivendita ? `Riv. ${record.numero_rivendita}` : 'Tabaccheria';
-  }
-  if (tableName === 'potential_activities') {
-    return record.numero ? `N. ${record.numero}` : 'Acq/Vend';
-  }
-  return 'Contatto';
-}
-
-// Helper to resolve the main title/name
-function getRecordTitle(record, tableName) {
-  if (tableName === 'commercial_activities') {
-    return record.categoria || 'Attività Commerciale';
-  }
-  if (tableName === 'properties') {
-    return `${record.nome_proprietario || ''} ${record.cognome_proprietario || ''}`.trim() || 'Immobile';
-  }
-  if (tableName === 'potential_tobacconists' || tableName === 'potential_activities') {
-    return `${record.nome || ''} ${record.cognome || ''}`.trim() || 'Potenziale';
-  }
-  if (tableName === 'telemarketing_contacts') {
-    return record.nome_azienda || `${record.nome || ''} ${record.cognome || ''}`.trim() || 'Contatto Telemarketing';
-  }
-  return record.title || 'Dettaglio';
-}
-
-// Helper to resolve details/subtitle
-function getRecordSubtitle(record, tableName) {
-  if (tableName === 'commercial_activities' || tableName === 'properties' || tableName === 'potential_tobacconists') {
-    return `${record.indirizzo || ''}, ${record.citta || ''}`.trim();
-  }
-  if (tableName === 'potential_activities') {
-    return `${record.email || ''} ${record.telefono || ''}`.trim() || record.note || '';
-  }
-  if (tableName === 'telemarketing_contacts') {
-    return `${record.telefono || ''} | ${record.email || ''} | ${record.citta || ''}`.trim();
-  }
-  return record.note || '';
-}
