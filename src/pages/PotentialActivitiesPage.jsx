@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Plus, Map, Stethoscope, Search, RefreshCw, Trash2, Filter, ExternalLink, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -29,6 +30,7 @@ const PotentialActivitiesPage = () => {
     const { toast } = useToast();
     const { potentialActivities, loading, fetchAllData, fetchTable, updateRecord } = useData();
     const { user, userRole } = useAuth();
+    const location = useLocation();
     
     // Search State Management
     const { searchState, saveSearchState, clearSearchState, hasPersistedState } = useSearchStateManager('potential_activities');
@@ -83,6 +85,25 @@ const PotentialActivitiesPage = () => {
         setIsRestored(true);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Handle incoming search or selection from Header global search
+    useEffect(() => {
+        if (location.state) {
+            if (location.state.searchTerm) {
+                setSearchTerm(location.state.searchTerm);
+            }
+            if (location.state.selectedRecord) {
+                setSelectedRecord(location.state.selectedRecord);
+                setIsDetailModalOpen(true);
+            } else if (location.state.selectedRecordId && potentialActivities?.length > 0) {
+                const found = potentialActivities.find(r => r.id === location.state.selectedRecordId);
+                if (found) {
+                    setSelectedRecord(found);
+                    setIsDetailModalOpen(true);
+                }
+            }
+        }
+    }, [location.state, potentialActivities, setSearchTerm]);
 
     // Save page state
     useEffect(() => {

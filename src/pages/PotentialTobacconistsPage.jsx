@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Plus, Map, ExternalLink, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -25,6 +26,7 @@ const PotentialTobacconistsPage = () => {
     const { toast } = useToast();
     const { potentialTobacconists, loading, fetchAllData, fetchTable } = useData();
     const { user, userRole } = useAuth();
+    const location = useLocation();
     const { getFormData } = useSessionStorage();
 
     const [selectedRecord, setSelectedRecord] = useState(null);
@@ -77,6 +79,25 @@ const PotentialTobacconistsPage = () => {
         setIsRestored(true);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Handle incoming search or selection from Header global search
+    useEffect(() => {
+        if (location.state) {
+            if (location.state.searchTerm) {
+                setSearchTerm(location.state.searchTerm);
+            }
+            if (location.state.selectedRecord) {
+                setSelectedRecord(location.state.selectedRecord);
+                setIsDetailModalOpen(true);
+            } else if (location.state.selectedRecordId && potentialTobacconists?.length > 0) {
+                const found = potentialTobacconists.find(r => r.id === location.state.selectedRecordId);
+                if (found) {
+                    setSelectedRecord(found);
+                    setIsDetailModalOpen(true);
+                }
+            }
+        }
+    }, [location.state, potentialTobacconists, setSearchTerm]);
 
     // Save page state
     useEffect(() => {

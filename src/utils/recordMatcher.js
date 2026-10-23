@@ -173,15 +173,31 @@ export function getRecordTitle(record, tableName) {
   if (tableName === 'commercial_activities') {
     const ownerName = `${record.nome_proprietario || ''} ${record.cognome_proprietario || ''}`.trim();
     if (ownerName && record.categoria) return `${record.categoria} - ${ownerName}`;
-    return ownerName || record.categoria || 'Attività Commerciale';
+    if (ownerName) return ownerName;
+    if (record.categoria) return `${record.categoria} (${record.codice || ''}-${record.numero || ''})`;
+    return record.codice ? `Attività ${record.codice}-${record.numero}` : 'Attività Commerciale';
   }
   if (tableName === 'properties') {
     const ownerName = `${record.nome_proprietario || ''} ${record.cognome_proprietario || ''}`.trim();
     if (ownerName && record.categoria) return `${record.categoria} - ${ownerName}`;
-    return ownerName || record.categoria || 'Immobile';
+    if (ownerName) return ownerName;
+    if (record.tipologia || record.categoria) return `${record.tipologia || record.categoria} (${record.codice || ''}-${record.numero || ''})`;
+    return record.codice ? `Immobile ${record.codice}-${record.numero}` : 'Immobile';
   }
-  if (tableName === 'potential_tobacconists' || tableName === 'potential_activities') {
-    return `${record.nome || ''} ${record.cognome || ''}`.trim() || 'Potenziale';
+  if (tableName === 'potential_tobacconists') {
+    const contactName = `${record.nome || ''} ${record.cognome || ''}`.trim();
+    if (contactName) return contactName;
+    if (record.numero_rivendita) return `Tabaccheria Riv. ${record.numero_rivendita}`;
+    if (record.telefono) return `Tabaccheria (${record.telefono})`;
+    return 'Potenziale Tabaccheria';
+  }
+  if (tableName === 'potential_activities') {
+    const contactName = `${record.nome || ''} ${record.cognome || ''}`.trim();
+    if (contactName) return contactName;
+    const typeLabel = record.type === 'venditore' ? 'Venditore' : 'Acquirente';
+    if (record.numero) return `${typeLabel} #${record.numero}`;
+    if (record.telefono) return `${typeLabel} (${record.telefono})`;
+    return typeLabel;
   }
   if (tableName === 'telemarketing_contacts') {
     const contactName = `${record.nome || ''} ${record.cognome || ''}`.trim();
@@ -208,6 +224,7 @@ export function getRecordSubtitle(record, tableName) {
   if (phones) parts.push(phones);
   if (geo) parts.push(geo);
   if (record.email || record.email_proprietario) parts.push(record.email || record.email_proprietario);
+  if (record.fonte_chiamata) parts.push(record.fonte_chiamata);
   
   return parts.join(' | ') || record.note || '';
 }

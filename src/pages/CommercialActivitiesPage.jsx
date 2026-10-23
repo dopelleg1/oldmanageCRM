@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { useData } from '@/contexts/DataContext';
 import { DataTable } from '@/components/ui/data-table';
@@ -27,6 +28,7 @@ const CommercialActivitiesPage = () => {
   const { activities, agents, loading, fetchAllData, fetchTable, deleteRecord } = useData();
   const { toast } = useToast();
   const { user, userRole } = useAuth();
+  const location = useLocation();
   const { getFormData } = useSessionStorage();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -91,6 +93,25 @@ const CommercialActivitiesPage = () => {
     setIsRestored(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Handle incoming search or selection from Header global search
+  useEffect(() => {
+    if (location.state) {
+      if (location.state.searchTerm) {
+        setSearchTerm(location.state.searchTerm);
+      }
+      if (location.state.selectedRecord) {
+        setSelectedActivity(location.state.selectedRecord);
+        setIsDetailModalOpen(true);
+      } else if (location.state.selectedRecordId && activities?.length > 0) {
+        const found = activities.find(r => r.id === location.state.selectedRecordId);
+        if (found) {
+          setSelectedActivity(found);
+          setIsDetailModalOpen(true);
+        }
+      }
+    }
+  }, [location.state, activities, setSearchTerm]);
 
   // Save state when any tracked state changes
   useEffect(() => {

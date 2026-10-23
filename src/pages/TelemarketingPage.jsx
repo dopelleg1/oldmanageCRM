@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { Helmet } from 'react-helmet-async';
 import { Plus, Map, RefreshCw, Trash2, ExternalLink, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -23,6 +24,7 @@ const TelemarketingPage = () => {
     const { toast } = useToast();
     const { telemarketing, loading, fetchAllData, fetchTable } = useData();
     const { user, userRole } = useAuth();
+    const location = useLocation();
     const { getFormData } = useSessionStorage();
     
     // Page State Management
@@ -74,6 +76,25 @@ const TelemarketingPage = () => {
         setIsRestored(true);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    // Handle incoming search or selection from Header global search
+    useEffect(() => {
+        if (location.state) {
+            if (location.state.searchTerm) {
+                setSearchTerm(location.state.searchTerm);
+            }
+            if (location.state.selectedRecord) {
+                setSelectedRecord(location.state.selectedRecord);
+                setIsDetailModalOpen(true);
+            } else if (location.state.selectedRecordId && telemarketing?.length > 0) {
+                const found = telemarketing.find(r => r.id === location.state.selectedRecordId);
+                if (found) {
+                    setSelectedRecord(found);
+                    setIsDetailModalOpen(true);
+                }
+            }
+        }
+    }, [location.state, telemarketing, setSearchTerm]);
 
     // Save state on change
     useEffect(() => {
