@@ -311,7 +311,7 @@ const PropertiesPage = () => {
                 isOpen={isDuplicatesModalOpen}
                 onClose={() => setIsDuplicatesModalOpen(false)}
                 tableName="properties"
-                keyField="codice" 
+                keyField="telefono_proprietario" 
                 onComplete={() => fetchTable('properties', true)}
             />
         </>
